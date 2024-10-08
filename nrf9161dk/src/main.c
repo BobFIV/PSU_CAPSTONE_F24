@@ -11,9 +11,9 @@
 #include <zephyr/net/socket.h>
 
 #include <zephyr/logging/log.h>
-#include <dk_buttons_and_leds.h>
 #include <modem/nrf_modem_lib.h>
 #include <modem/lte_lc.h>
+#include <dk_buttons_and_leds.h>
 
 #if NCS_VERSION_NUMBER < 0x20600
 #include <zephyr/random/rand32.h>
@@ -120,24 +120,29 @@ static char* create_request_payload(void)
 
 static int create_request_payload(char* str_buffer)
 {
-	float temperature = 0.0;
-	float speed = 0.0;
-	float latitude = 0.0;
-	float longitude = 0.0;
+	float temperature = 70.0f;
+	float speed = 3.2f;
+	float latitude = 40.791578f;
+	float longitude = -77.870827f;
+
+	LOG_INF("Temperature:  %.02f", temperature);
+	LOG_INF("Speed:        %.02f", speed);
+	LOG_INF("Latitude:     %.06f", latitude);
+	LOG_INF("Longitude:    %.06f", longitude);
 
 	char payload_str[200] = "{\"m2m:cin\": {\"cnf\": \"text/plain:0\", \"con\": \"{";
 
-	char temperature_str[10];
-	sprintf(temperature_str, "%.2f", temperature);
+	char temperature_str[14];
+	snprintf(temperature_str, sizeof(temperature_str), "%.02f", temperature);
 	
-	char speed_str[10];
-	sprintf(speed_str, "%.2f", speed);
+	char speed_str[14];
+	snprintf(speed_str, sizeof(speed_str), "%.02f", speed);
 	
-	char latitude_str[10];
-	sprintf(latitude_str, "%.4f", latitude);
+	char latitude_str[14];
+	snprintf(latitude_str, sizeof(latitude_str), "%.06f", latitude);
 	
-	char longitude_str[10];
-	sprintf(longitude_str, "%.4f", longitude);
+	char longitude_str[14];
+	snprintf(longitude_str, sizeof(longitude_str), "%.06f", longitude);
 
 	strcat(payload_str, "\\\"temperature\\\": ");
 	strcat(payload_str, temperature_str);
