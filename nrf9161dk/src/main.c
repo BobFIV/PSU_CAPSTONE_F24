@@ -133,16 +133,16 @@ static int create_request_payload(char* str_buffer)
 	char payload_str[200] = "{\"m2m:cin\": {\"cnf\": \"text/plain:0\", \"con\": \"{";
 
 	char temperature_str[14];
-	snprintf(temperature_str, sizeof(temperature_str), "%.02f", temperature);
+	snprintk(temperature_str, sizeof(temperature_str), "%.02f", temperature);
 	
 	char speed_str[14];
-	snprintf(speed_str, sizeof(speed_str), "%.02f", speed);
+	snprintk(speed_str, sizeof(speed_str), "%.02f", speed);
 	
 	char latitude_str[14];
-	snprintf(latitude_str, sizeof(latitude_str), "%.06f", latitude);
+	snprintk(latitude_str, sizeof(latitude_str), "%.06f", latitude);
 	
 	char longitude_str[14];
-	snprintf(longitude_str, sizeof(longitude_str), "%.06f", longitude);
+	snprintk(longitude_str, sizeof(longitude_str), "%.06f", longitude);
 
 	strcat(payload_str, "\\\"temperature\\\": ");
 	strcat(payload_str, temperature_str);
