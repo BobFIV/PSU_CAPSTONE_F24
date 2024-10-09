@@ -99,19 +99,6 @@ int main(void)
 	
 	static const struct i2c_dt_spec dev_i2c = I2C_DT_SPEC_GET(I2C0_NODE);
 	init_temp_probe(dev_i2c);
-	/*if (!device_is_ready(dev_i2c.bus)) {
-		printk("I2C bus %s is not ready!\n\r",dev_i2c.bus->name);
-		return -1;
-	}*/
-
-	/* Setting it to freerun mode */
-	
-	/*uint8_t config[2] = {STTS751_CONFIG_REG,0b00000100};
-	err = i2c_write_dt(&dev_i2c, config, sizeof(config));
-	if (err != 0) {
-		printk("Failed to write to I2C device address %x at Reg. %x \n", dev_i2c.addr,config[0]);
-		return -1;
-	}*/
 
 	
 	while (1) {
@@ -139,7 +126,7 @@ int main(void)
 		double fTemp = cTemp * 1.8 + 32;
 		
 		// setting it as the output
-		data_placeholder.temperature = fTemp;
+		data_placeholder.temperature = fTemp;//get_temp(dev_i2c);
 
 		/* Receive response from the CoAP server */
 		received = onem2m_receive();

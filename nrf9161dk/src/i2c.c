@@ -45,6 +45,7 @@ double get_temp(const struct i2c_dt_spec dev_i2c) {
     if (temp > 2047) {
         temp -= 4096;
     }
+    printk(temp>>4);
 
     // Convert to degrees units 
     double cTemp = temp * 0.0625;
