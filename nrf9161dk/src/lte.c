@@ -9,6 +9,8 @@
 #include <modem/lte_lc.h>
 #include <dk_buttons_and_leds.h>
 
+
+
 K_SEM_DEFINE(lte_connected, 0, 1);
 
 LOG_MODULE_REGISTER(LTE_Module, LOG_LEVEL_INF);

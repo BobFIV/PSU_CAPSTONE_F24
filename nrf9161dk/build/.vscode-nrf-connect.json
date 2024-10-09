@@ -1,0 +1,16 @@
+{
+  "board": "nrf9161dk_nrf9161_ns",
+  "boardRevision": "1.0.0",
+  "boardDir": "/home/jet_mouse/ncs/v2.6.1/zephyr/boards/arm/nrf9161dk_nrf9161",
+  "shouldBuild": true,
+  "optimizations": "none",
+  "cmakeArgs": [],
+  "confFiles": [
+    "prj.conf"
+  ],
+  "buildDirectory": "build",
+  "kconfigFragments": [],
+  "snippets": [],
+  "dtcOverlays": [],
+  "extraDtcOverlays": []
+}

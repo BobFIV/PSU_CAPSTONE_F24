@@ -13,4 +13,5 @@ project(cellular_fundamentals)
 target_sources(app PRIVATE src/main.c)
 target_sources(app PRIVATE src/lte.c)
 target_sources(app PRIVATE src/coap_onem2m.c)
+target_sources(app PRIVATE src/i2c.c)
 # NORDIC SDK APP END

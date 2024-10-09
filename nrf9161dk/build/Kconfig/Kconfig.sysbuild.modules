@@ -1,0 +1,6 @@
+menu "nrf (/home/jet_mouse/ncs/v2.6.1/nrf)"
+osource "/home/jet_mouse/ncs/v2.6.1/nrf/sysbuild/Kconfig.sysbuild"
+config ZEPHYR_NRF_MODULE
+	bool
+	default y
+endmenu

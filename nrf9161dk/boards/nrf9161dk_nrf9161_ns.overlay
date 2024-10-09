@@ -1,0 +1,7 @@
+&i2c2 {  
+    mysensor: mysensor@38{
+        compatible = "i2c-device";
+        status = "okay";
+        reg = < 0x38 >;
+    };
+};
