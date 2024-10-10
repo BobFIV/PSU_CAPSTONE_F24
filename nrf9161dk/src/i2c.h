@@ -6,5 +6,8 @@
 
 #define I2C0_NODE DT_NODELABEL(mysensor)
 
+//initialize temperature polling
+int i2c_init_temp_probe(void);
 
-//void init_temp_probe(const struct i2c_dt_spec);
+//retrieve the temperature (fahrenheit) from the device
+double i2c_get_temp(void);
