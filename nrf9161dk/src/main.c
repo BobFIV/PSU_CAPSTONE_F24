@@ -22,6 +22,7 @@
 #include <zephyr/sys/printk.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
+#include "gnss.h"
 
 struct data_point data_placeholder = {
 	.temperature = 70.0f,
@@ -84,16 +85,7 @@ int main(void)
 	if (dk_buttons_init(button_handler) != 0) {
 		LOG_ERR("Failed to initialize the buttons library");
 	}
-
-	if (server_resolve() != 0) {
-		LOG_INF("Failed to resolve server name");
-		return 0;
-	}
-
-	if (client_init() != 0) {
-		LOG_INF("Failed to initialize client");
-		return 0;
-	}
+	
 
 	/* Setting up the i2c device */
 	
@@ -102,11 +94,43 @@ int main(void)
 
 	
 	while (1) {
-		
-		
-		
-		//get the temperature
+		// Wait for GNSS fix
+		k_sem_take(&gnss_fix_obtained, K_FOREVER);
+
+		// Activate LTE
+		if (lte_lc_func_mode_set(LTE_LC_FUNC_MODE_NORMAL) != 0) {
+			LOG_ERR("Failed to activate LTE");
+			return 0;
+		}
+
+		k_sem_take(&lte_connected, K_FOREVER);
+
+		// Connect to the CoAP server
+		if (resolve_address_lock == 0){
+			LOG_INF("Resolving the server address\n\r");
+			if (server_resolve() != 0) {
+				LOG_ERR("Failed to resolve server name\n");
+					return 0;
+			}
+			resolve_address_lock = 1;
+		}
+
+		if (client_init() != 0) {
+			LOG_INF("Failed to initialize CoAP client");
+			return 0;
+		}
+
+		// Acquire data from GNSS receiver and sensors
+		struct nrf_modem_gnss_pvt_data_frame gnss_data = get_current_pvt();
+		data_placeholder.latitude = gnss_data.latitude;
+		data_placeholder.longitude = gnss_data.longitude;
 		data_placeholder.temperature = i2c_get_temp();
+
+		// Send the data to the CoAP server
+		if (client_post_send() != 0) {
+			LOG_ERR("Failed to send POST request, exit...\n");
+			break;
+		}
 
 		/* Receive response from the CoAP server */
 		received = onem2m_receive();
@@ -125,6 +149,14 @@ int main(void)
 			break;
 		}
 
+		// Disconnect from the CoAP server, deactivate LTE
+		(void)close(sock);
+
+		err = lte_lc_func_mode_set(LTE_LC_FUNC_MODE_DEACTIVATE_LTE);
+		if (err != 0){
+			LOG_ERR("Failed to decativate LTE and enable GNSS functional mode");
+			break;
+		}
 	}
 
 	onem2m_close_socket();
