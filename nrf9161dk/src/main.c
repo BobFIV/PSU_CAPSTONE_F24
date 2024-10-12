@@ -23,6 +23,9 @@
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include "gnss.h"
+#include <nrf_modem_gnss.h>
+
+int resolve_address_lock = 0;
 
 struct data_point data_placeholder = {
 	.temperature = 70.0f,
@@ -92,7 +95,8 @@ int main(void)
 	
 	i2c_init_temp_probe();
 
-	
+	gnss_init();
+
 	while (1) {
 		// Wait for GNSS fix
 		k_sem_take(&gnss_fix_obtained, K_FOREVER);
@@ -127,7 +131,7 @@ int main(void)
 		data_placeholder.temperature = i2c_get_temp();
 
 		// Send the data to the CoAP server
-		if (client_post_send() != 0) {
+		if (client_post_send(data_placeholder) != 0) {
 			LOG_ERR("Failed to send POST request, exit...\n");
 			break;
 		}
@@ -150,7 +154,7 @@ int main(void)
 		}
 
 		// Disconnect from the CoAP server, deactivate LTE
-		(void)close(sock);
+		onem2m_close_socket();
 
 		err = lte_lc_func_mode_set(LTE_LC_FUNC_MODE_DEACTIVATE_LTE);
 		if (err != 0){

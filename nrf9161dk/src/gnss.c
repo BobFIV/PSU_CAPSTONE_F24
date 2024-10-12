@@ -53,14 +53,12 @@ void gnss_event_handler(int event)
 
 	case NRF_MODEM_GNSS_EVT_SLEEP_AFTER_FIX:
 		LOG_INF("GNSS enters sleep because fix was achieved in periodic mode\n\r");
-		device_status = status_fixed;
 		retval = nrf_modem_gnss_read(&last_pvt, sizeof(last_pvt), NRF_MODEM_GNSS_DATA_PVT);
 		if (retval == 0)
         {
 			current_pvt = last_pvt;
 			print_fix_data(&current_pvt);
 			k_sem_give(&gnss_fix_obtained);
-            // get the pvt data into the data_placeholder struct in main.c
 		}
 		break;
 
