@@ -15,9 +15,9 @@ struct nrf_modem_gnss_pvt_data_frame current_pvt;
 
 
 // Print the latitude and longitude, and other data
-static void print_fix_data(struct nrf_modem_gnss_pvt_data_frame *pvt_data)
+void print_fix_data(struct nrf_modem_gnss_pvt_data_frame *pvt_data)
 {
-	LOG_INF("Latitude:    %.06f\n", pvt_data->latitude);
+	LOG_INF("Latitude:    %.06f", pvt_data->latitude);
 	LOG_INF("Longitude:   %.06f\n", pvt_data->longitude);;
 }
 
@@ -27,6 +27,8 @@ struct nrf_modem_gnss_pvt_data_frame get_current_pvt(void)
     return current_pvt;
 }
 
+int gnss_event_count = 0;
+
 // Handler for GNSS events
 void gnss_event_handler(int event)
 {
@@ -35,12 +37,19 @@ void gnss_event_handler(int event)
 	switch (event)
     {
 	case NRF_MODEM_GNSS_EVT_PVT:
-		LOG_INF("Searching for GNSS Satellites....\n\r");
-		device_status = status_searching;
+		// Every 30 seconds
+		gnss_event_count++;
+		if (gnss_event_count == 1) {
+			LOG_INF("Searching for GNSS Satellites....\r");
+		}
+		else if (gnss_event_count == 30) {
+			gnss_event_count = 0;
+		}
 		break;
 
 	case NRF_MODEM_GNSS_EVT_FIX:
 		LOG_INF("GNSS fix event\n\r");
+		gnss_event_count = 0;
 		break;
 
 	case NRF_MODEM_GNSS_EVT_PERIODIC_WAKEUP:
