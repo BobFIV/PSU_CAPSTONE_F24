@@ -19,3 +19,6 @@ void gnss_event_handler(int event);
 
 // Initialize GNSS
 int gnss_init(void);
+
+//Confugyre modem
+int modem_configure(void);

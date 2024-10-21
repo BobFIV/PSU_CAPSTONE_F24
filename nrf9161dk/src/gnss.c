@@ -5,6 +5,8 @@
 #include <modem/nrf_modem_lib.h>
 #include <modem/modem_key_mgmt.h>
 #include <nrf_modem_gnss.h>
+#include <modem/lte_lc.h>
+
 
 K_SEM_DEFINE(gnss_fix_obtained, 0, 1);
 
@@ -12,6 +14,22 @@ LOG_MODULE_REGISTER(GNSS_Module, LOG_LEVEL_INF);
 
 struct nrf_modem_gnss_pvt_data_frame last_pvt;
 struct nrf_modem_gnss_pvt_data_frame current_pvt;
+
+//Configure the modem
+int modem_configure(void)
+{
+	int err;
+
+	LOG_INF("Initializing modem library");
+
+	err = nrf_modem_lib_init();
+	if (err) {
+		LOG_ERR("Failed to initialize the modem library, error: %d", err);
+		return err;
+	}
+	
+	return 0;
+}
 
 
 // Print the latitude and longitude, and other data
@@ -39,11 +57,21 @@ void gnss_event_handler(int event)
 	case NRF_MODEM_GNSS_EVT_PVT:
 		// Every 30 seconds
 		gnss_event_count++;
-		if (gnss_event_count == 1) {
-			LOG_INF("Searching for GNSS Satellites....\r");
-		}
-		else if (gnss_event_count == 30) {
+		
+		if (gnss_event_count == 10) {
 			gnss_event_count = 0;
+		}
+		nrf_modem_gnss_read(&last_pvt, sizeof(last_pvt), NRF_MODEM_GNSS_DATA_PVT);
+		int num_satellites = 0;
+		for (int i = 0; i < 12 ; i++) {
+			if (last_pvt.sv[i].signal != 0) { 
+				LOG_DBG("sv: %d, cn0: %d, signal: %d", last_pvt.sv[i].sv, last_pvt.sv[i].cn0, last_pvt.sv[i].signal);
+				num_satellites++;
+			}
+		}
+		LOG_DBG("Number of current satellites: %d", num_satellites);
+		if (gnss_event_count == 1) {
+			LOG_INF("Searching for GNSS Satellites (%d)....\r", num_satellites);
 		}
 		break;
 
@@ -83,46 +111,41 @@ void gnss_event_handler(int event)
 // Initialize GNSS
 int gnss_init(void)
 {
-#if defined(CONFIG_GNSS_HIGH_ACCURACY_TIMING_SOURCE)
-	if (nrf_modem_gnss_timing_source_set(NRF_MODEM_GNSS_TIMING_SOURCE_TCXO)){
-		LOG_ERR("Failed to set TCXO timing source");
-		return -1;
+	int err;
+	err = modem_configure();
+	if (err) {
+		LOG_ERR("Failed to configure the modem");
+		return 0;
 	}
-#endif
 
-#if defined(CONFIG_GNSS_LOW_ACCURACY) || defined (CONFIG_BOARD_THINGY91_NRF9160_NS)
-	uint8_t use_case;
-	use_case = NRF_MODEM_GNSS_USE_CASE_MULTIPLE_HOT_START | NRF_MODEM_GNSS_USE_CASE_LOW_ACCURACY;
-	if (nrf_modem_gnss_use_case_set(use_case) != 0) {
-		LOG_ERR("Failed to set low accuracy use case");
-		return -1;
+	/* STEP 8 - Activate only the GNSS stack */
+	if (lte_lc_func_mode_set(LTE_LC_FUNC_MODE_ACTIVATE_GNSS) != 0) {
+		LOG_ERR("Failed to activate GNSS functional mode");
+		return 0;
 	}
-#endif
 
-	/* Configure GNSS event handler . */
+	/* STEP 9 - Register the GNSS event handler */
 	if (nrf_modem_gnss_event_handler_set(gnss_event_handler) != 0) {
 		LOG_ERR("Failed to set GNSS event handler");
-		return -1;
+		return 0;
 	}
 
+	/* STEP 10 - Set the GNSS fix interval and GNSS fix retry period */
 	if (nrf_modem_gnss_fix_interval_set(CONFIG_TRACKER_PERIODIC_INTERVAL) != 0) {
 		LOG_ERR("Failed to set GNSS fix interval");
-		return -1;
+		return 0;
 	}
 
 	if (nrf_modem_gnss_fix_retry_set(CONFIG_TRACKER_PERIODIC_TIMEOUT) != 0) {
 		LOG_ERR("Failed to set GNSS fix retry");
-		return -1;
+		return 0;
 	}
 
+	/* STEP 11 - Start the GNSS receiver*/
+	LOG_INF("Starting GNSS");
 	if (nrf_modem_gnss_start() != 0) {
 		LOG_ERR("Failed to start GNSS");
-		return -1;
+		return 0;
 	}
 
-	if (nrf_modem_gnss_prio_mode_enable() != 0){
-		LOG_ERR("Error setting GNSS priority mode");
-		return -1;
-	}
-	return 0;
 }
