@@ -225,6 +225,22 @@ int data_receipt_root(dect_packet data, int rssi){
 		LOG_INF("    Signal:         %d", data.rssi);
 		LOG_INF("    Parent:         %d", data.op_hwid);
 		LOG_INF("    Locked:         %d", (int)data.locked);
+		data_point uart_out = {
+			.hwid = data.hwid,
+			.parent = data.op_hwid,
+			.temperature = data.temperature,
+			.speed = data.speed,
+			.rssi = data.rssi,
+			.latitude = data.latitude,
+			.longitude = data.longitude,
+			.accelX = 0.0f,
+			.accelY = -0.0f,
+			.accelZ = -0.0f,
+			.gyroX = -0.0f,
+			.gyroY = -0.0f,
+			.gyroZ = -0.0f,
+		};
+		uart_send_data(uart_out);
 	} else {
 		//LOG_INF("Ping.");
 	}
