@@ -9,8 +9,13 @@
 #include <nrf_modem_dect_phy.h>
 #include <modem/nrf_modem_lib.h>
 #include <zephyr/drivers/hwinfo.h>
+#ifndef MESH_H_
 #include "mesh.h"
-
+#endif
+#ifndef UART_H_
+#include "uart.h"
+#endif
+#include <dk_buttons_and_leds.h>
 #define NAN 0.0f/0.0f
 
 LOG_MODULE_REGISTER(Main_Module, LOG_LEVEL_INF);
@@ -32,28 +37,67 @@ dect_packet fwd_data;
 
 uint16_t hwid;
 uint16_t my_index;
-uint16_t all_devices[] = {10639U, 46924U, 32048U};
-#define NUM_DEVICES 3
+
+extern uint16_t all_devices[] = {46924U, 32048U};
 
 
 
 
 
-//#define IS_ROOT
 
 
+
+
+int get_device_index(uint16_t input_hwid){
+	for(int i = 0; i < NUM_DEVICES; i++){
+		if(all_devices[i] == input_hwid){
+			return i;
+		}
+	}
+	return -1;
+}
 
 
 
 
 
 #ifdef IS_ROOT
+
+
+
 int data_receipt_root(dect_packet data, int rssi);
 uint16_t device_waiting;
 bool continue_listening;
+update_point* device_locks_mesh;
 
-int mesh(data_point* point, struct k_sem* mesh_sem)
+static void button_handler(uint32_t button_state, uint32_t has_changed)
 {
+	/* Send a GET request or PUT request upon button triggers */
+	if (has_changed & DK_BTN1_MSK && button_state & DK_BTN1_MSK) 
+	{
+		for(int i = 0; i < NUM_DEVICES; i++){
+			if(device_locks_mesh[i].locked){
+				device_locks_mesh[i].locked = false;
+			} else {
+				device_locks_mesh[i].locked = true;
+			}
+		}
+		
+	}
+}
+
+int mesh(update_point* locks, struct k_sem* mesh_sem)
+{
+	dk_buttons_init(button_handler);
+	dk_leds_init();
+	for(int i = 0; i < NUM_DEVICES; i++){
+		update_point initial_update_point = {
+			.hwid = all_devices[i],
+			.locked = true
+		};
+		locks[i] = initial_update_point;
+		device_locks_mesh = locks;
+	}
 	dect_init();
 	hwinfo_get_device_id((void *)&hwid, sizeof(hwid));
 	dect_set_callback(&data_receipt_root);
@@ -73,7 +117,8 @@ int mesh(data_point* point, struct k_sem* mesh_sem)
 			.latitude = NAN,
 			.longitude = NAN,
 			.speed = NAN,
-			.temperature = NAN
+			.temperature = NAN,
+			.locked = false
 		};
 		dect_packet vsem_point = {
 			.is_ping = false,
@@ -84,7 +129,8 @@ int mesh(data_point* point, struct k_sem* mesh_sem)
 			.latitude = NAN,
 			.longitude = NAN,
 			.speed = NAN,
-			.temperature = NAN
+			.temperature = NAN,
+			.locked = false
 		};
 		dect_packet ack_packet = {
 			.is_ping = true,
@@ -95,7 +141,8 @@ int mesh(data_point* point, struct k_sem* mesh_sem)
 			.latitude = NAN,
 			.longitude = NAN,
 			.temperature = NAN,
-			.speed = NAN
+			.speed = NAN,
+			.locked = false
 		};
 		dect_send(ping_point);
 		
@@ -110,6 +157,7 @@ int mesh(data_point* point, struct k_sem* mesh_sem)
 		/** Receiving messages for CONFIG_RX_PERIOD_MS miliseconds. */
 		for(int i = 0; i < NUM_DEVICES; i++){ // send a vsem to each device and wait for it to respond.
 			vsem_point.hwid = all_devices[i];
+			vsem_point.locked = locks[i].locked;
 			device_waiting = all_devices[i];
 			if(device_waiting == hwid){
 				continue;
@@ -175,6 +223,8 @@ int data_receipt_root(dect_packet data, int rssi){
 		LOG_INF("    Temperature:    %0.6f", (double)data.temperature);
 		LOG_INF("    Speed:          %0.6f", (double)data.speed);
 		LOG_INF("    Signal:         %d", data.rssi);
+		LOG_INF("    Parent:         %d", data.op_hwid);
+		LOG_INF("    Locked:         %d", (int)data.locked);
 	} else {
 		//LOG_INF("Ping.");
 	}
@@ -196,9 +246,12 @@ uint16_t root_id;
 uint16_t device_waiting;
 bool has_received_ack;
 data_point* sensor_data;
+bool is_locked;
 
 int mesh(data_point* sens_data, struct k_sem* mesh_sem)
 {
+	dk_leds_init();
+	k_sem_take(mesh_sem, K_FOREVER);
 	sensor_data = sens_data;
 	my_index = -1;
 	dect_init();
@@ -217,10 +270,9 @@ int mesh(data_point* sens_data, struct k_sem* mesh_sem)
 	}
 
 	while (1) {
-
+		
 		LOG_INF("I am %u at #%d", hwid, my_index);
 		LOG_INF("Waiting for ping from root.");
-
 		has_received_ping = false;
 		bool has_sent_ping = false;
 		has_a_child = false;
@@ -235,7 +287,9 @@ int mesh(data_point* sens_data, struct k_sem* mesh_sem)
 					.latitude = -0.0f,
 					.longitude = -0.0f,
 					.speed = -0.0f,
-					.temperature = -0.0f
+					.temperature = -0.0f,
+					.op_hwid = 0,
+					.locked = false
 				};
 				dect_send(out_data);
 				has_sent_ping = true;
@@ -261,7 +315,9 @@ int mesh(data_point* sens_data, struct k_sem* mesh_sem)
 			.longitude = sensor_data->longitude,
 			.speed = sensor_data->speed,
 			.temperature = sensor_data->temperature,
-			.rssi = sensor_data->rssi
+			.rssi = sensor_data->rssi,
+			.op_hwid = parent,
+			.locked = is_locked
 		};
 		
 		// LOG_INF("Transmission Complete.");
@@ -287,10 +343,13 @@ int mesh(data_point* sens_data, struct k_sem* mesh_sem)
 					dect_send(echo_packet);
 					LOG_INF("Echoing request to ...%u", echo_packet.hwid%1000); // echo the Vsem
 				} else {
+					is_locked = echo_packet.locked;
+					send_point.locked = is_locked;
 					k_msleep(CONCURRENCY_DELAY);
 					dect_send(send_point);
 					
 					LOG_INF("Received request, sent my data.");
+					dk_set_led(DK_LED1, is_locked);
 					echo_packet.sender_hwid = hwid;
 					dect_send(echo_packet);
 					LOG_INF("Re-sent my vsem so everyone hears it.");
@@ -304,6 +363,7 @@ int mesh(data_point* sens_data, struct k_sem* mesh_sem)
 
 		LOG_INF("Receipt      Complete.");
 		LOG_INF("");
+		k_sem_give(mesh_sem);
 		k_msleep(WAIT_BEFORE_NEXT_CYCLE);
 		
 

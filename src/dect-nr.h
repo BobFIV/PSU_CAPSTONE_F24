@@ -13,11 +13,13 @@ typedef struct {
     uint16_t target_hwid;
     uint16_t hwid;
     uint16_t sender_hwid;
+	uint16_t op_hwid;
 	int rssi;
     float temperature;
     float speed;
     float latitude;
     float longitude;
+	bool locked;
 } dect_packet;
 
 typedef int (*dect_callback_t)(dect_packet, int rssi);
