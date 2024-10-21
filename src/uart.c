@@ -41,6 +41,7 @@ const struct uart_config uart_cfg = {
 
 static void uart_cb(const struct device *dev, struct uart_event *evt, void *user_data)
 {
+	LOG_INF("Callback called");
 	switch (evt->type) {
 
 	case UART_RX_RDY:
@@ -88,7 +89,6 @@ int uart_send_data(data_point out_data){
 		return 1 ;
 	}
     return uart_tx(uart2, tx_buf, sizeof(tx_buf), SYS_FOREVER_MS);
-    uart_poll_out(uart2, 65);
     return 0;
 }
 
@@ -96,8 +96,13 @@ int uart_module_init(void){
     int err = uart_callback_set(uart2, uart_cb, NULL);
     if(err != 0){
         LOG_ERR("Callback set failed %d", err);
-    }
-    uart_configure(uart2, &uart_cfg);
+    } else {
+		LOG_INF("Callback set success");
+	}
+    err = uart_configure(uart2, &uart_cfg);
+	if(err != 0){
+		LOG_ERR("UART config failed %d", err);
+	}
     return 0;
 }
 
