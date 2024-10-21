@@ -44,20 +44,33 @@
 #define APP_COAP_MAX_MSG_LEN 1280
 #define APP_ONEM2M_VERSION 3
 
-struct data_point {
-    float temperature;
-    float speed;
+typedef struct {
+    int rssi;
+    uint16_t hwid;
+    uint16_t parent;
     float latitude;
     float longitude;
-};
+    float temperature;
+    float speed;
+    float accelX;
+    float accelY;
+    float accelZ;
+    float gyroX;
+    float gyroY;
+    float gyroZ;
+} data_point;
+typedef struct {
+    uint16_t hwid;
+    bool locked;
+} update_point;
 
 ssize_t coap_receive(void);
-int create_request_payload(char* str_buffer, struct data_point data);
+int create_request_payload(char* str_buffer, data_point data);
 int server_resolve(void);
 int client_init(void);
 int client_get_send(void);
-int client_put_send(struct data_point data);
-int client_post_send(struct data_point data);
+int client_put_send(data_point data);
+int client_post_send(data_point data);
 int client_handle_response(uint8_t *buf, int received);
 ssize_t onem2m_receive(void);
 void onem2m_close_socket(void);

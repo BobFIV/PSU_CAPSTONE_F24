@@ -9,8 +9,6 @@
 #include <modem/lte_lc.h>
 #include <dk_buttons_and_leds.h>
 
-extern struct k_sem lte_connected;
-
 //LTE handler
 void lte_handler(const struct lte_lc_evt *const evt);
 

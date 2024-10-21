@@ -13,7 +13,7 @@
 #include "coap_onem2m.h"
 
 char message_buffer[200];
-char originator[] = "CAdmin";
+char originator[] = "Cdr_3fffc0a7";
 
 /* the buffer to receive the response. */
 static uint8_t coap_buf[APP_COAP_MAX_MSG_LEN];
@@ -28,10 +28,19 @@ static char request_identifier_str[9];
 static int sock;
 static struct sockaddr_storage server;
 
+/* current CoAP resource */
+char current_coap_tx_resource[sizeof("cse-in/00000-AE/data")];
+char current_coap_rx_resource[sizeof("cse-in/00000-AE")];
+
 //Register this as the coap module
 LOG_MODULE_REGISTER(CoAP_Module, LOG_LEVEL_INF);
 
-int create_request_payload(char* str_buffer, struct data_point data)
+void get_coap_tx_resource(uint16_t hwid){
+	snprintk(current_coap_tx_resource, sizeof(current_coap_tx_resource), "cse-in/%d-AE/data", hwid);
+	snprintk(current_coap_rx_resource, sizeof(current_coap_rx_resource), "cse-in/%d-AE", hwid);
+}
+
+int create_request_payload(char* str_buffer, data_point data)
 {
 	float temperature = data.temperature;
 	float speed = data.speed;
@@ -171,8 +180,8 @@ int client_get_send(void)
 	err = coap_packet_append_option(
 					&request,
 					COAP_OPTION_URI_PATH,
-					(uint8_t *)CONFIG_COAP_RX_RESOURCE,
-					strlen(CONFIG_COAP_RX_RESOURCE)
+					(uint8_t *)current_coap_rx_resource,
+					strlen(current_coap_rx_resource)
 				);
 
 	if (err < 0)
@@ -240,13 +249,15 @@ int client_get_send(void)
 }
 
 /**@brief Send CoAP PUT request. */
-int client_put_send(struct data_point data)
+int client_put_send(data_point data)
 {
 	int err;
 	struct coap_packet request;
 
 	next_token = sys_rand32_get();
+	get_coap_tx_resource(data.hwid);
 
+	LOG_INF("TX Resource: %s", current_coap_tx_resource);
 	/* Initialize the CoAP packet and append the resource path */
 	err = coap_packet_init(
 				&request,
@@ -269,8 +280,8 @@ int client_put_send(struct data_point data)
 	err = coap_packet_append_option(
 					&request,
 					COAP_OPTION_URI_PATH,
-					(uint8_t *)CONFIG_COAP_TX_RESOURCE,
-					strlen(CONFIG_COAP_TX_RESOURCE)
+					(uint8_t *)current_coap_tx_resource,
+					strlen(current_coap_tx_resource)
 				);
 
 	if (err < 0)
@@ -322,12 +333,14 @@ int client_put_send(struct data_point data)
 }
 
 /**@brief Send CoAP POST request. */
-int client_post_send(struct data_point data)
+int client_post_send(data_point data)
 {
 	int err;
 	struct coap_packet request;
 
 	next_token = sys_rand32_get();
+	get_coap_tx_resource(data.hwid);
+	LOG_INF("TX Resource: %s", current_coap_tx_resource);
 
 	/* Initialize the CoAP packet and append the resource path */
 	err = coap_packet_init(
@@ -352,8 +365,8 @@ int client_post_send(struct data_point data)
 	err = coap_packet_append_option(
 					&request,
 					COAP_OPTION_URI_PATH,
-					(uint8_t *)CONFIG_COAP_TX_RESOURCE,
-					strlen(CONFIG_COAP_TX_RESOURCE)
+					(uint8_t *)current_coap_tx_resource,
+					strlen(current_coap_tx_resource)
 				);
 
 	if (err < 0)

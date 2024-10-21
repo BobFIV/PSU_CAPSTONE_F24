@@ -9,14 +9,15 @@
 #include <modem/lte_lc.h>
 #include <dk_buttons_and_leds.h>
 
+
+
 K_SEM_DEFINE(lte_connected, 0, 1);
 
 LOG_MODULE_REGISTER(LTE_Module, LOG_LEVEL_INF);
 
 void lte_handler(const struct lte_lc_evt *const evt)
 {
-     switch (evt->type)
-	 {
+     switch (evt->type) {
      case LTE_LC_EVT_NW_REG_STATUS:
         if ((evt->nw_reg_status != LTE_LC_NW_REG_REGISTERED_HOME) &&
             (evt->nw_reg_status != LTE_LC_NW_REG_REGISTERED_ROAMING)) {
@@ -27,15 +28,13 @@ void lte_handler(const struct lte_lc_evt *const evt)
 				"Connected - home network" : "Connected - roaming");
 		k_sem_give(&lte_connected);
         break;
-
 	case LTE_LC_EVT_RRC_UPDATE:
 		LOG_INF("RRC mode: %s", evt->rrc_mode == LTE_LC_RRC_MODE_CONNECTED ?
 				"Connected" : "Idle");
 		break;
-
-    default:
-            break;
-    }
+     default:
+             break;
+     }
 }
 
 int modem_configure(void)
@@ -56,12 +55,9 @@ int modem_configure(void)
 		return err;
 	}
 
-	// Start with LTE deactivated
-	err = lte_lc_func_mode_set(LTE_LC_FUNC_MODE_DEACTIVATE_LTE);
-	if (err) {
-		LOG_ERR("Failed to decativate LTE and enable GNSS functional mode");
-		return err;
-	}
+	k_sem_take(&lte_connected, K_FOREVER);
+	LOG_INF("Connected to LTE network");
+	dk_set_led_on(DK_LED2);
 
 	return 0;
 }

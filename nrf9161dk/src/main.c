@@ -15,19 +15,18 @@
 #include <zephyr/random/random.h>
 #include <string.h>
 #include "lte.h"
-#include "coap_onem2m.h"
+//#include "coap_onem2m.h"
+#include "uart.h"
 #include <zephyr/net/coap.h>
-#include "i2c.h"
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
-#include "gnss.h"
 #include <nrf_modem_gnss.h>
 
 int resolve_address_lock = 0;
 
-struct data_point data_placeholder = {
+data_point data_placeholder = {
 	.temperature = 70.0f,
 	.speed = 3.2f,
 	.latitude = 40.022253f,
@@ -68,7 +67,19 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 	}
 }
 
-int main(void)
+K_SEM_DEFINE(packet_sem, 0, 1);
+K_SEM_DEFINE(init_sem, 0, 1);
+
+
+
+
+int uart_coap_callback(data_point in_data){
+	data_placeholder = in_data;
+	k_sem_give(&packet_sem);
+	return 0;
+}
+
+int main_coap(void)
 {
 	
 
@@ -88,54 +99,22 @@ int main(void)
 	if (dk_buttons_init(button_handler) != 0) {
 		LOG_ERR("Failed to initialize the buttons library");
 	}
-	
 
-	/* Setting up the i2c device */
-	
-	
-	i2c_init_temp_probe();
+	if (server_resolve() != 0) {
+		LOG_INF("Failed to resolve server name");
+		return 0;
+	}
 
-	gnss_init();
+	if (client_init() != 0) {
+		LOG_INF("Failed to initialize client");
+		return 0;
+	}
 
+	uart_module_init();
+	uart_coap_callback_set(uart_coap_callback);
+	k_sem_give(&init_sem);
+	LOG_INF("Initialized");
 	while (1) {
-		// Wait for GNSS fix
-		k_sem_take(&gnss_fix_obtained, K_FOREVER);
-
-		// Activate LTE
-		if (lte_lc_func_mode_set(LTE_LC_FUNC_MODE_NORMAL) != 0) {
-			LOG_ERR("Failed to activate LTE");
-			return 0;
-		}
-
-		k_sem_take(&lte_connected, K_FOREVER);
-
-		// Connect to the CoAP server
-		if (resolve_address_lock == 0){
-			LOG_INF("Resolving the server address\n\r");
-			if (server_resolve() != 0) {
-				LOG_ERR("Failed to resolve server name\n");
-					return 0;
-			}
-			resolve_address_lock = 1;
-		}
-
-		if (client_init() != 0) {
-			LOG_INF("Failed to initialize CoAP client");
-			return 0;
-		}
-
-		// Acquire data from GNSS receiver and sensors
-		struct nrf_modem_gnss_pvt_data_frame gnss_data = get_current_pvt();
-		data_placeholder.latitude = gnss_data.latitude;
-		data_placeholder.longitude = gnss_data.longitude;
-		data_placeholder.temperature = i2c_get_temp();
-
-		// Send the data to the CoAP server
-		if (client_post_send(data_placeholder) != 0) {
-			LOG_ERR("Failed to send POST request, exit...\n");
-			break;
-		}
-
 		/* Receive response from the CoAP server */
 		received = onem2m_receive();
 		if (received < 0) {
@@ -153,17 +132,20 @@ int main(void)
 			break;
 		}
 
-		// Disconnect from the CoAP server, deactivate LTE
-		onem2m_close_socket();
-
-		err = lte_lc_func_mode_set(LTE_LC_FUNC_MODE_DEACTIVATE_LTE);
-		if (err != 0){
-			LOG_ERR("Failed to decativate LTE and enable GNSS functional mode");
-			break;
-		}
 	}
 
 	onem2m_close_socket();
 
 	return 0;
 }
+
+int sender(void){
+	k_sem_take(&init_sem, K_FOREVER);
+	while(1){
+		k_sem_take(&packet_sem, K_FOREVER);
+		client_post_send(data_placeholder);
+	}
+}
+
+K_THREAD_DEFINE(main_thread, 1024, main_coap, NULL, NULL, NULL, 0, 0, 0);
+K_THREAD_DEFINE(sender_thread, 1024, sender, NULL, NULL, NULL, 1, 0, 0);
