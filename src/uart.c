@@ -47,12 +47,11 @@ static void uart_cb(const struct device *dev, struct uart_event *evt, void *user
 	case UART_RX_RDY:
 		if ((evt->data.rx.len) == 1) {
 
-			LOG_INF("qwuiwhj");
 		} else if(evt->data.rx.len == sizeof(data_point)){
-			LOG_INF("qwjio");
+			
 			void* in_data = &(evt->data.rx.buf[evt->data.rx.offset]);
-			LOG_INF("fqwjio");
-			printk("%x", *last_data_point);
+			
+			//printk("%x", *last_data_point);
 			//*last_data_point = *((data_point*)in_data);
 			memcpy((void*)last_data_point, in_data, sizeof(data_point));
 			LOG_INF("UART data_point received");

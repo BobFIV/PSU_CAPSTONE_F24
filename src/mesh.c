@@ -107,6 +107,7 @@ int mesh(update_point* locks, struct k_sem* mesh_sem)
 	while (1) {
 		//LOG_ERR("Start");
 		LOG_INF("***********************************");
+		LOG_INF("I am %u", hwid);
 
 		dect_packet ping_point = {
 			.is_ping = true,
@@ -156,6 +157,7 @@ int mesh(update_point* locks, struct k_sem* mesh_sem)
 
 		/** Receiving messages for CONFIG_RX_PERIOD_MS miliseconds. */
 		for(int i = 0; i < NUM_DEVICES; i++){ // send a vsem to each device and wait for it to respond.
+			k_msleep(30); // REMOVE FOR TESTING HIGHER SPEEDS
 			vsem_point.hwid = all_devices[i];
 			vsem_point.locked = locks[i].locked;
 			device_waiting = all_devices[i];
