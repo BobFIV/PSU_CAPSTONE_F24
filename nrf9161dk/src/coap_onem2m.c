@@ -31,6 +31,15 @@ static struct sockaddr_storage server;
 //Register this as the coap module
 LOG_MODULE_REGISTER(CoAP_Module, LOG_LEVEL_INF);
 
+int create_get_request_payload(char* str_buffer)
+{
+	char payload_str[200] = "{\"m2m:atrl\": [\"lock\"]}";
+
+	strcpy(str_buffer, payload_str);
+
+	return 0;
+}
+
 int create_request_payload(char* str_buffer, struct data_point data)
 {
 	float temperature = data.temperature;
@@ -181,6 +190,15 @@ int client_get_send(void)
 		return err;
 	}
 
+	/* Append the content format as plain text */
+	const uint8_t onem2m_json = 10015;
+	err = coap_packet_append_option(
+					&request,
+					COAP_OPTION_CONTENT_FORMAT,
+					&onem2m_json,
+					sizeof(onem2m_json)
+				);
+
 	/* Append the OneM2M options */
 	char app_onem2m_version[2];
 	snprintf(app_onem2m_version, sizeof(app_onem2m_version), "%d", APP_ONEM2M_VERSION);
@@ -222,6 +240,29 @@ int client_get_send(void)
 	if (err < 0)
 	{
 		LOG_ERR("Failed to encode CoAP option oneM2M RQI, %d", err);
+		return err;
+	}
+
+
+	/* Add the payload to the message */
+	err = coap_packet_append_payload_marker(&request);
+
+	if (err < 0)
+	{
+		LOG_ERR("Failed to append payload marker, %d", err);
+		return err;
+	}
+
+	create_get_request_payload(message_buffer);
+	err = coap_packet_append_payload(
+					&request,
+					(uint8_t *)message_buffer,
+					strlen(message_buffer)
+				);
+
+	if (err < 0)
+	{
+		LOG_ERR("Failed to append payload, %d", err);
 		return err;
 	}
 
