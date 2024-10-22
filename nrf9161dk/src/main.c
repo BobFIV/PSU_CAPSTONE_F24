@@ -33,6 +33,9 @@ struct data_point data_placeholder = {
 //Register this as the main module
 LOG_MODULE_REGISTER(Main_Module, LOG_LEVEL_INF);
 
+#define I2C0_NODE_TEMP DT_NODELABEL(sensor_temp)
+#define I2C0_NODE_ACC DT_NODELABEL(sensor_acc)
+
 static void button_handler(uint32_t button_state, uint32_t has_changed)
 {
 	/* Send a GET request or PUT request upon button triggers */
@@ -74,17 +77,17 @@ int main(void)
 	if (dk_leds_init() != 0) {
 		LOG_ERR("Failed to initialize the LED library");
 	}
-
+/*
 	err = modem_configure();
 	if (err) {
 		LOG_ERR("Failed to configure the modem");
 		return 0;
 	}
-
+*/
 	if (dk_buttons_init(button_handler) != 0) {
 		LOG_ERR("Failed to initialize the buttons library");
 	}
-
+/*
 	if (server_resolve() != 0) {
 		LOG_INF("Failed to resolve server name");
 		return 0;
@@ -94,11 +97,14 @@ int main(void)
 		LOG_INF("Failed to initialize client");
 		return 0;
 	}
-
+*/
 	/* Setting up the i2c device */
 	
-	static const struct i2c_dt_spec dev_i2c = I2C_DT_SPEC_GET(I2C0_NODE);
-	init_temp_probe(dev_i2c);
+	static const struct i2c_dt_spec dev_i2c_temp = I2C_DT_SPEC_GET(I2C0_NODE_TEMP);
+	init_temp_probe(dev_i2c_temp);
+
+	static const struct i2c_dt_spec dev_i2c_acc = I2C_DT_SPEC_GET(I2C0_NODE_ACC);
+	init_acc_probe(dev_i2c_acc);
 
 	
 	while (1) {
@@ -106,13 +112,13 @@ int main(void)
 		// Getting the temperature
 		uint8_t temp_reading[2]= {0};
 		uint8_t sensor_regs[2] ={STTS751_TEMP_LOW_REG,STTS751_TEMP_HIGH_REG};
-		err = i2c_write_read_dt(&dev_i2c,&sensor_regs[0],1,&temp_reading[0],1);
+		err = i2c_write_read_dt(&dev_i2c_temp,&sensor_regs[0],1,&temp_reading[0],1);
 		if (err != 0) {
-			printk("Failed to write/read I2C device address %x at Reg. %x \r\n", dev_i2c.addr,sensor_regs[0]);
+			printk("Failed to write/read I2C device address %x at Reg. %x \r\n", dev_i2c_temp.addr,sensor_regs[0]);
 		}
-		err = i2c_write_read_dt(&dev_i2c,&sensor_regs[1],1,&temp_reading[1],1);
+		err = i2c_write_read_dt(&dev_i2c_temp,&sensor_regs[1],1,&temp_reading[1],1);
 		if (err != 0) {
-			printk("Failed to write/read I2C device address %x at Reg. %x \r\n", dev_i2c.addr,sensor_regs[1]);
+			printk("Failed to write/read I2C device address %x at Reg. %x \r\n", dev_i2c_temp.addr,sensor_regs[1]);
 		}
 
 		// Convert the two bytes
@@ -126,9 +132,36 @@ int main(void)
 		double fTemp = cTemp * 1.8 + 32;
 		
 		// setting it as the output
-		data_placeholder.temperature = fTemp;//get_temp(dev_i2c);
+		data_placeholder.temperature = fTemp;//get_temp(dev_i2c_temp);
+		//printk("Temperature in Celsius : %.2f C \n", cTemp);
+
+
+		uint8_t acc_reading[7]= {0};
+		uint8_t acc_sensor_regs[7] ={LIS2DUX12_OUT_TAG,LIS2DUX12_OUT_X_L,LIS2DUX12_OUT_X_H,LIS2DUX12_OUT_Y_L,LIS2DUX12_OUT_Y_H,LIS2DUX12_OUT_Z_L,LIS2DUX12_OUT_Z_H};
+		/*for (int i=0;i<6;i++) {
+			err = i2c_write_read_dt(&dev_i2c_acc,&acc_sensor_regs[i],1,&acc_reading[i],1);
+			if (err != 0) {
+				printk("Failed to write/read I2C device address %x at Reg. %x \r\n", dev_i2c_acc.addr,acc_sensor_regs[i]);
+			}
+		}*/
+		err = i2c_write_read_dt(&dev_i2c_acc,&acc_sensor_regs[0],1,&acc_reading[0],7);
+		if (err != 0) {
+			printk("Failed to write/read I2C device address %x at Reg. %x \r\n", dev_i2c_acc.addr,acc_sensor_regs[0]);
+		}
+		int_least16_t x = ((int)acc_reading[2] * 256 + ((int)acc_reading[1]));
+		int_least16_t y = ((int)acc_reading[4] * 256 + ((int)acc_reading[3]));
+		int_least16_t z = ((int)acc_reading[6] * 256 + ((int)acc_reading[5]));
+		//printk("TAG: %i\r\n", (int)acc_reading[0]);
+		if (acc_reading[0]==17) {
+			printk("X: %i, Y: %i, Z: %i\r\n", x, y, z);
+			//printk("X_LOW: %i, Y: %i, Z: %i\r\n", (int)acc_reading[1], (int)acc_reading[3], (int)acc_reading[5]);
+		    //printk("X_HIG: %i, Y: %i, Z: %i\r\n", (int)acc_reading[2], (int)acc_reading[4], (int)acc_reading[6]);
+		}
+		//printk("X_LOW: %i, Y: %i, Z: %i\r\n", (int)acc_reading[1], (int)acc_reading[3], (int)acc_reading[5]);
+		//printk("X_HIG: %i, Y: %i, Z: %i\r\n", (int)acc_reading[2], (int)acc_reading[4], (int)acc_reading[6]);
 
 		/* Receive response from the CoAP server */
+		/*
 		received = onem2m_receive();
 		if (received < 0) {
 			LOG_ERR("Socket error: %d, exit", errno);
@@ -137,14 +170,16 @@ int main(void)
 			LOG_INF("Empty datagram");
 			continue;
 		}
-
+		*/
 		/* Parse the received CoAP packet */
+		/*
 		err = onem2m_parse(received);
 		if (err < 0) {
 			LOG_ERR("Invalid response, exit");
 			break;
 		}
-
+		*/
+		k_sleep(K_MSEC(100));
 	}
 
 	onem2m_close_socket();

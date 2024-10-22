@@ -26,6 +26,39 @@ void init_temp_probe(const struct i2c_dt_spec dev_i2c) {
     return;
 }
 
+void init_acc_probe(const struct i2c_dt_spec dev_i2c) {
+    int err;
+    //static const struct i2c_dt_spec dev_i2c = I2C_DT_SPEC_GET(I2C0_NODE);
+	if (!device_is_ready(dev_i2c.bus)) {
+		printk("I2C bus %s is not ready!\n\r",dev_i2c.bus->name);
+		return -1;
+	}
+
+    /* Setting it to freerun mode */
+
+    uint8_t config1[2] = {LIS2DUX12_CONFIG_REG,0b00001000};
+	err = i2c_write_dt(&dev_i2c, config1, sizeof(config1));
+	if (err != 0) {
+		printk("Failed to write to I2C device address %x at Reg. %x \n", dev_i2c.addr,config1[0]);
+		return -1;
+	}
+
+    uint8_t config2[2] = {LIS2DUX12_FIFO_CONFIG_REG1,0b00101100};
+	err = i2c_write_dt(&dev_i2c, config2, sizeof(config2));
+	if (err != 0) {
+		printk("Failed to write to I2C device address %x at Reg. %x \n", dev_i2c.addr,config2[0]);
+		return -1;
+	}
+
+    uint8_t config3[2] = {LIS2DUX12_FIFO_CONFIG_REG2,0b00000110};
+	err = i2c_write_dt(&dev_i2c, config3, sizeof(config3));
+	if (err != 0) {
+		printk("Failed to write to I2C device address %x at Reg. %x \n", dev_i2c.addr,config3[0]);
+		return -1;
+	}
+    return;
+}
+
 double get_temp(const struct i2c_dt_spec dev_i2c) {
     int err;
     // Getting the temperature
