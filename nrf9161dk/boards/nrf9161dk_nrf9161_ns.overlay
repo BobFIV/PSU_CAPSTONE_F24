@@ -5,3 +5,6 @@
         reg = < 0x38 >;
     };
 };
+&uart1 {
+    status = "okay";
+};

@@ -13,7 +13,7 @@
 #include "coap_onem2m.h"
 
 char message_buffer[200];
-char originator[] = "Cdr_3fffc0a7";
+char originator[] = "CAdmin";
 
 /* the buffer to receive the response. */
 static uint8_t coap_buf[APP_COAP_MAX_MSG_LEN];
@@ -29,15 +29,16 @@ static int sock;
 static struct sockaddr_storage server;
 
 /* current CoAP resource */
-char current_coap_tx_resource[sizeof("cse-in/00000-AE/data")];
-char current_coap_rx_resource[sizeof("cse-in/00000-AE")];
+char current_coap_tx_resource[sizeof("cse-in/00000-AE/data")] = "cse-in/00000-AE/data";
+char current_coap_rx_resource[sizeof("cse-in/00000-AE/lock")] = "cse-in/00000-AE/lock";
+
 
 //Register this as the coap module
 LOG_MODULE_REGISTER(CoAP_Module, LOG_LEVEL_INF);
 
 void get_coap_tx_resource(uint16_t hwid){
 	snprintk(current_coap_tx_resource, sizeof(current_coap_tx_resource), "cse-in/%d-AE/data", hwid);
-	snprintk(current_coap_rx_resource, sizeof(current_coap_rx_resource), "cse-in/%d-AE", hwid);
+	snprintk(current_coap_rx_resource, sizeof(current_coap_rx_resource), "cse-in/%d-AE/lock", hwid);
 }
 
 int create_request_payload(char* str_buffer, data_point data)
@@ -79,6 +80,15 @@ int create_request_payload(char* str_buffer, data_point data)
 	strcat(payload_str, longitude_str);
 
 	strcat(payload_str, "}\"}}");
+
+	strcpy(str_buffer, payload_str);
+
+	return 0;
+}
+
+int create_get_request_payload(char* str_buffer)
+{
+	char payload_str[200] = "{\"m2m:atrl\": [\"lock\", \"pi\"]}";
 
 	strcpy(str_buffer, payload_str);
 
@@ -151,12 +161,14 @@ int client_init(void)
 }
 
 /**@brief Send CoAP GET request. */
-int client_get_send(void)
+/**@brief Send CoAP GET request. */
+int client_get_send(uint16_t hwid)
 {
 	
 	struct coap_packet request;
 
 	next_token = sys_rand32_get();
+	get_coap_tx_resource(hwid);
 
 	int err = coap_packet_init(
 					&request,
@@ -189,6 +201,15 @@ int client_get_send(void)
 		LOG_ERR("Failed to encode CoAP option, %d", err);
 		return err;
 	}
+
+	/* Append the content format as plain text */
+	const uint8_t onem2m_json = 10015;
+	err = coap_packet_append_option(
+					&request,
+					COAP_OPTION_CONTENT_FORMAT,
+					&onem2m_json,
+					sizeof(onem2m_json)
+				);
 
 	/* Append the OneM2M options */
 	char app_onem2m_version[2];
@@ -231,6 +252,29 @@ int client_get_send(void)
 	if (err < 0)
 	{
 		LOG_ERR("Failed to encode CoAP option oneM2M RQI, %d", err);
+		return err;
+	}
+
+
+	/* Add the payload to the message */
+	err = coap_packet_append_payload_marker(&request);
+
+	if (err < 0)
+	{
+		LOG_ERR("Failed to append payload marker, %d", err);
+		return err;
+	}
+
+	create_get_request_payload(message_buffer);
+	err = coap_packet_append_payload(
+					&request,
+					(uint8_t *)message_buffer,
+					strlen(message_buffer)
+				);
+
+	if (err < 0)
+	{
+		LOG_ERR("Failed to append payload, %d", err);
 		return err;
 	}
 
@@ -477,7 +521,7 @@ int client_post_send(data_point data)
 	return 0;
 }
 
-/**@brief Handles responses from the remote CoAP server. */
+/**@brief Handles responses from the remote CoAP server, returns HWID*2+locked */
 int client_handle_response(uint8_t *buf, int received)
 {
 	struct coap_packet reply;
@@ -494,21 +538,37 @@ int client_handle_response(uint8_t *buf, int received)
 		return err;
 	}
 
+	int out = 0;
 	/* Confirm the token in the response matches the token sent */
-	token_len = coap_header_get_token(&reply, token);
+	// token_len = coap_header_get_token(&reply, token);
 
-	if ((token_len != sizeof(next_token)) || 
-		(memcmp(&next_token, token, sizeof(next_token)) != 0)) 
-	{
-		LOG_ERR("Invalid token received: 0x%02x%02x", token[1], token[0]);
-		return 0;
-	}
+	// if ((token_len != sizeof(next_token)) || 
+	// 	(memcmp(&next_token, token, sizeof(next_token)) != 0)) 
+	// {
+	// 	LOG_ERR("Invalid token received: 0x%02x%02x", token[1], token[0]);
+	// 	return 0;
+	// }
 
 	/* Retrieve the payload and confirm it's nonzero */
 	payload = coap_packet_get_payload(&reply, &payload_len);
 
+	// THIS NEEDS TO BE REWRITTEN AT SOME POINT IT DOES NOT HANDLE VARIABILITY IN FORMATS
 	if (payload_len > 0) { 
+		int index;
 		snprintf(temp_buf, MIN(payload_len+1, sizeof(temp_buf)), "%s", payload); 
+		if(payload[9] == 'k'){
+			if(payload[22] == 't'){
+				out++;
+				LOG_INF("Device Locked");
+				index = 36;
+			} else {
+				LOG_INF("Device Unlocked");
+				index = 37;
+			}
+			out += strtol(&(payload[index]), NULL, 10)*2;
+			LOG_INF("Hwid: %d", out/2);
+		}
+
 	} 
 
 	else { 
@@ -519,7 +579,7 @@ int client_handle_response(uint8_t *buf, int received)
 	LOG_INF("CoAP response: Code 0x%x, Token 0x%02x%02x, Payload: %s",
 	coap_header_get_code(&reply), token[1], token[0], (char *)temp_buf);
 
-	return 0;
+	return out;
 }
 
 int onem2m_parse(int received)

@@ -68,7 +68,7 @@ ssize_t coap_receive(void);
 int create_request_payload(char* str_buffer, data_point data);
 int server_resolve(void);
 int client_init(void);
-int client_get_send(void);
+int client_get_send(uint16_t hwid);
 int client_put_send(data_point data);
 int client_post_send(data_point data);
 int client_handle_response(uint8_t *buf, int received);

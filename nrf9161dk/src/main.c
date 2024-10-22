@@ -131,7 +131,13 @@ int main_coap(void)
 			LOG_ERR("Invalid response, exit");
 			break;
 		}
-
+		if(err > 2){
+			update_point out = {
+				.hwid = err/2,
+				.locked = err%2
+			};
+			uart_send_data(out);
+		}
 	}
 
 	onem2m_close_socket();
@@ -144,6 +150,7 @@ int sender(void){
 	while(1){
 		k_sem_take(&packet_sem, K_FOREVER);
 		client_post_send(data_placeholder);
+		client_get_send(data_placeholder.hwid);
 	}
 }
 
