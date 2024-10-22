@@ -60,7 +60,6 @@ int uart_send_data(data_point out_data){
 		return 1 ;
 	}
     return uart_tx(uart2, tx_buf, sizeof(tx_buf), SYS_FOREVER_MS);
-    uart_poll_out(uart2, 65);
     return 0;
 }
 
