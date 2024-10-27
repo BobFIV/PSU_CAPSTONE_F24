@@ -148,14 +148,28 @@ int main(void)
 		if (err != 0) {
 			printk("Failed to write/read I2C device address %x at Reg. %x \r\n", dev_i2c_acc.addr,acc_sensor_regs[0]);
 		}
-		int_least16_t x = ((int)acc_reading[2] * 256 + ((int)acc_reading[1]));
-		int_least16_t y = ((int)acc_reading[4] * 256 + ((int)acc_reading[3]));
-		int_least16_t z = ((int)acc_reading[6] * 256 + ((int)acc_reading[5]));
+		int_least16_t x = (((int)acc_reading[2]&0x0F) * 256 + ((int)acc_reading[1]))*16;
+		int_least16_t y = (((int)acc_reading[3]) * 256 + ((int)acc_reading[2]&0xF0));
+		int_least16_t z = (((int)acc_reading[5]&0x0F) * 256 + ((int)acc_reading[4]))*16;
 		//printk("TAG: %i\r\n", (int)acc_reading[0]);
 		if (acc_reading[0]==17) {
-			printk("X: %i, Y: %i, Z: %i\r\n", x, y, z);
+			printk("X: %i, Y: %i, Z: %i\r\n", x/16, y/16, z/16);
+			//printk("Temp: %i\r\n",((int)acc_reading[5]&0x0F)*16+(int)acc_reading[6]);
 			//printk("X_LOW: %i, Y: %i, Z: %i\r\n", (int)acc_reading[1], (int)acc_reading[3], (int)acc_reading[5]);
 		    //printk("X_HIG: %i, Y: %i, Z: %i\r\n", (int)acc_reading[2], (int)acc_reading[4], (int)acc_reading[6]);
+			//printk("X: %i, %i, %i, %i\r\n", (int)acc_reading[2]/16, (int)acc_reading[2]&0x0F, (int)acc_reading[1]/16, (int)acc_reading[1]&0x0F);
+			//printk("Y: %i, %i, %i, %i\r\n", (int)acc_reading[4]/16, (int)acc_reading[4]&0x0F, (int)acc_reading[3]/16, (int)acc_reading[3]&0x0F);
+			//printk("Z: %i, %i, %i, %i\r\n\r\n", (int)acc_reading[6]/16, (int)acc_reading[6]&0x0F, (int)acc_reading[5]/16, (int)acc_reading[5]&0x0F);
+			// X bottom half of Hi and all of Lo is for X
+			// Y Bottom is highest part of Y, Top part is lower bits of Z.
+			// Z Hi and top of Lo is for temperature, Bottom of Lo is highest bits for Z.
+			// YL XH XM XL
+			// ZM ZL YH YM
+			// TH TM TL	ZH
+			// Or, in the register,
+			// XM XL YL XH
+			// YH YM ZM ZL
+			// TL ZH TH TM // HOW DOES THIS MAKE ANY SENSE??!?
 		}
 		//printk("X_LOW: %i, Y: %i, Z: %i\r\n", (int)acc_reading[1], (int)acc_reading[3], (int)acc_reading[5]);
 		//printk("X_HIG: %i, Y: %i, Z: %i\r\n", (int)acc_reading[2], (int)acc_reading[4], (int)acc_reading[6]);
