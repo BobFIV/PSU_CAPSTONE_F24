@@ -78,10 +78,7 @@ double i2c_get_temp() {
     }
 
     // Convert the two bytes
-    int temp = ((int)temp_reading[1] * 256 + ((int)temp_reading[0] & 0xF0)) / 16;
-    if (temp > 2047) {
-        temp -= 4096;
-    }
+    int16_t temp = ((int)temp_reading[1] * 256 + ((int)temp_reading[0] & 0xF0));
     //printk(temp>>4);
     LOG_INF("Temperature (int) retrieved: %d", temp);
     // Convert to degrees units 
