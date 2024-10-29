@@ -1,8 +1,15 @@
 &i2c2 {  
-    mysensor: mysensor@38{
+    sensor_temp: sensor_temp@38{
         compatible = "i2c-device";
         status = "okay";
         reg = < 0x38 >;
+    };
+};
+&i2c2 {  
+    sensor_acc: sensor_acc@19{
+        compatible = "i2c-device";
+        status = "okay";
+        reg = < 0x19 >;
     };
 };
 &uart1 {

@@ -64,6 +64,7 @@ int main_sens(void)
 	
 	
 	i2c_init_temp_probe();
+	init_acc_probe();
 
 	gnss_init();
 
@@ -71,6 +72,11 @@ int main_sens(void)
 		k_msleep(10000);
 		k_sem_take(&op_sem, K_FOREVER);
 		current_data_point.temperature = i2c_get_temp();
+		int16_t* accdata = i2c_get_acc();
+		current_data_point.accelX = accdata[0];
+		current_data_point.accelY = accdata[1];
+		current_data_point.accelZ = accdata[2];
+		k_free(accdata);
 		k_sem_give(&op_sem);
 	}
 	return 0;
