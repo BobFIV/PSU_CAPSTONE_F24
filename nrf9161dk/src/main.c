@@ -110,6 +110,7 @@ int main(void)
 	while (1) {
 		
 		// Getting the temperature
+		/*
 		uint8_t temp_reading[2]= {0};
 		uint8_t sensor_regs[2] ={STTS751_TEMP_LOW_REG,STTS751_TEMP_HIGH_REG};
 		err = i2c_write_read_dt(&dev_i2c_temp,&sensor_regs[0],1,&temp_reading[0],1);
@@ -130,21 +131,27 @@ int main(void)
 		// Convert to degrees units 
 		double cTemp = temp * 0.0625;
 		double fTemp = cTemp * 1.8 + 32;
-		
+		*/
 		// setting it as the output
-		data_placeholder.temperature = fTemp;//get_temp(dev_i2c_temp);
-		//printk("Temperature in Celsius : %.2f C \n", cTemp);
+		double* cTemp = get_temp(dev_i2c_temp);
+		data_placeholder.temperature = cTemp[0];
+		printk("Temperature in Celsius : %.2f C \n", cTemp[0]);
+		k_free(cTemp);
 
-
+		
+		int_least16_t* data = get_acc(dev_i2c_acc);
+		//printk("X: %i, Y: %i, Z: %i, T: %i\r\n", data[0], data[1], data[2], data[3]);
+		k_free(data);
+		/*
 		uint8_t acc_reading[7]= {0};
 		uint8_t acc_sensor_reg = LIS2DUX12_OUT_TAG;
 		//uint8_t acc_sensor_regs[7] ={LIS2DUX12_OUT_TAG,LIS2DUX12_OUT_X_L,LIS2DUX12_OUT_X_H,LIS2DUX12_OUT_Y_L,LIS2DUX12_OUT_Y_H,LIS2DUX12_OUT_Z_L,LIS2DUX12_OUT_Z_H};
-		/*for (int i=0;i<6;i++) {
-			err = i2c_write_read_dt(&dev_i2c_acc,&acc_sensor_regs[i],1,&acc_reading[i],1);
-			if (err != 0) {
-				printk("Failed to write/read I2C device address %x at Reg. %x \r\n", dev_i2c_acc.addr,acc_sensor_regs[i]);
-			}
-		}*/
+		//for (int i=0;i<6;i++) {
+			//err = i2c_write_read_dt(&dev_i2c_acc,&acc_sensor_regs[i],1,&acc_reading[i],1);
+			//if (err != 0) {
+				//printk("Failed to write/read I2C device address %x at Reg. %x \r\n", dev_i2c_acc.addr,acc_sensor_regs[i]);
+			//}
+		//}
 		err = i2c_write_read_dt(&dev_i2c_acc,&acc_sensor_reg,1,&acc_reading[0],7);
 		if (err != 0) {
 			printk("Failed to write/read I2C device address %x at Reg. %x \r\n", dev_i2c_acc.addr,&acc_sensor_reg);
@@ -171,7 +178,7 @@ int main(void)
 			// XM XL YL XH
 			// YH YM ZM ZL
 			// TL ZH TH TM // HOW DOES THIS MAKE ANY SENSE??!?
-		}
+		}*/
 		//printk("X_LOW: %i, Y: %i, Z: %i\r\n", (int)acc_reading[1], (int)acc_reading[3], (int)acc_reading[5]);
 		//printk("X_HIG: %i, Y: %i, Z: %i\r\n", (int)acc_reading[2], (int)acc_reading[4], (int)acc_reading[6]);
 

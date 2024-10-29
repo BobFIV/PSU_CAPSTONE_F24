@@ -59,7 +59,7 @@ void init_acc_probe(const struct i2c_dt_spec dev_i2c) {
     return;
 }
 
-double get_temp(const struct i2c_dt_spec dev_i2c) {
+void* get_temp(const struct i2c_dt_spec dev_i2c) {
     int err;
     // Getting the temperature
     uint8_t temp_reading[2]= {0};
@@ -78,10 +78,37 @@ double get_temp(const struct i2c_dt_spec dev_i2c) {
     if (temp > 2047) {
         temp -= 4096;
     }
-    printk(temp>>4);
+    //printk(temp>>4);
 
     // Convert to degrees units 
     double cTemp = temp * 0.0625;
     double fTemp = cTemp * 1.8 + 32;
-    return fTemp;
+    double* data = k_malloc(sizeof(double)*1);
+    data[0] = cTemp;
+    return data;
+}
+
+void* get_acc(const struct i2c_dt_spec dev_i2c_acc) {
+    int err;
+    uint8_t acc_reading[7]= {0};
+    uint8_t acc_sensor_reg = LIS2DUX12_OUT_TAG;
+    
+    err = i2c_write_read_dt(&dev_i2c_acc,&acc_sensor_reg,1,&acc_reading[0],7);
+    if (err != 0) {
+        printk("Failed to write/read I2C device address %x at Reg. %x \r\n", dev_i2c_acc.addr,&acc_sensor_reg);
+    }
+    int_least16_t x = (((int)acc_reading[2]&0x0F) * 256 + ((int)acc_reading[1]))*16;
+    int_least16_t y = (((int)acc_reading[3]) * 256 + ((int)acc_reading[2]&0xF0));
+    int_least16_t z = (((int)acc_reading[5]&0x0F) * 256 + ((int)acc_reading[4]))*16;
+    int_least16_t t = (((int)acc_reading[6]) * 256 + ((int)acc_reading[5]&0xF0));
+    //printk("TAG: %i\r\n", (int)acc_reading[0]);
+    //if (acc_reading[0]==17) {
+        //printk("X: %i, Y: %i, Z: %i\r\n", x/16, y/16, z/16);
+    //}
+    int_least16_t* data = k_malloc(sizeof(int_least16_t)*4);
+    data[0] = x/16;
+    data[1] = y/16;
+    data[2] = z/16;
+    data[3] = t/16;
+    return data;
 }
