@@ -137,16 +137,17 @@ int main(void)
 
 
 		uint8_t acc_reading[7]= {0};
-		uint8_t acc_sensor_regs[7] ={LIS2DUX12_OUT_TAG,LIS2DUX12_OUT_X_L,LIS2DUX12_OUT_X_H,LIS2DUX12_OUT_Y_L,LIS2DUX12_OUT_Y_H,LIS2DUX12_OUT_Z_L,LIS2DUX12_OUT_Z_H};
+		uint8_t acc_sensor_reg = LIS2DUX12_OUT_TAG;
+		//uint8_t acc_sensor_regs[7] ={LIS2DUX12_OUT_TAG,LIS2DUX12_OUT_X_L,LIS2DUX12_OUT_X_H,LIS2DUX12_OUT_Y_L,LIS2DUX12_OUT_Y_H,LIS2DUX12_OUT_Z_L,LIS2DUX12_OUT_Z_H};
 		/*for (int i=0;i<6;i++) {
 			err = i2c_write_read_dt(&dev_i2c_acc,&acc_sensor_regs[i],1,&acc_reading[i],1);
 			if (err != 0) {
 				printk("Failed to write/read I2C device address %x at Reg. %x \r\n", dev_i2c_acc.addr,acc_sensor_regs[i]);
 			}
 		}*/
-		err = i2c_write_read_dt(&dev_i2c_acc,&acc_sensor_regs[0],1,&acc_reading[0],7);
+		err = i2c_write_read_dt(&dev_i2c_acc,&acc_sensor_reg,1,&acc_reading[0],7);
 		if (err != 0) {
-			printk("Failed to write/read I2C device address %x at Reg. %x \r\n", dev_i2c_acc.addr,acc_sensor_regs[0]);
+			printk("Failed to write/read I2C device address %x at Reg. %x \r\n", dev_i2c_acc.addr,&acc_sensor_reg);
 		}
 		int_least16_t x = (((int)acc_reading[2]&0x0F) * 256 + ((int)acc_reading[1]))*16;
 		int_least16_t y = (((int)acc_reading[3]) * 256 + ((int)acc_reading[2]&0xF0));
@@ -193,7 +194,7 @@ int main(void)
 			break;
 		}
 		*/
-		k_sleep(K_MSEC(100));
+		k_sleep(K_MSEC(10));
 	}
 
 	onem2m_close_socket();
