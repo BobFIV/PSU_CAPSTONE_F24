@@ -135,13 +135,13 @@ int main(void)
 		// setting it as the output
 		double* cTemp = get_temp(dev_i2c_temp);
 		data_placeholder.temperature = cTemp[0];
-		printk("Temperature in Celsius : %.2f C \n", cTemp[0]);
-		k_free(cTemp);
+		//printk("Temperature in Celsius : %.2f C \n", cTemp[0]);
 
 		
 		int_least16_t* data = get_acc(dev_i2c_acc);
-		//printk("X: %i, Y: %i, Z: %i, T: %i\r\n", data[0], data[1], data[2], data[3]);
+		printk("X: %i, Y: %i, Z: %i, T: %.2f\r\n", data[0], data[1], data[2], cTemp[0]);
 		k_free(data);
+		k_free(cTemp);
 		/*
 		uint8_t acc_reading[7]= {0};
 		uint8_t acc_sensor_reg = LIS2DUX12_OUT_TAG;

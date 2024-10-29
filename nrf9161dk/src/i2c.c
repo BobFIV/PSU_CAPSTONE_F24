@@ -74,14 +74,14 @@ void* get_temp(const struct i2c_dt_spec dev_i2c) {
     }
 
     // Convert the two bytes
-    int temp = ((int)temp_reading[1] * 256 + ((int)temp_reading[0] & 0xF0)) / 16;
-    if (temp > 2047) {
+    int temp = ((int)temp_reading[1] * 256 + ((int)temp_reading[0]));
+    if (temp > 32767) {
         temp -= 4096;
     }
     //printk(temp>>4);
 
     // Convert to degrees units 
-    double cTemp = temp * 0.0625;
+    double cTemp = temp * 0.01;//625;
     double fTemp = cTemp * 1.8 + 32;
     double* data = k_malloc(sizeof(double)*1);
     data[0] = cTemp;
@@ -101,6 +101,7 @@ void* get_acc(const struct i2c_dt_spec dev_i2c_acc) {
     int_least16_t y = (((int)acc_reading[3]) * 256 + ((int)acc_reading[2]&0xF0));
     int_least16_t z = (((int)acc_reading[5]&0x0F) * 256 + ((int)acc_reading[4]))*16;
     int_least16_t t = (((int)acc_reading[6]) * 256 + ((int)acc_reading[5]&0xF0));
+    _Float16 temp = ((double)t)*0.045 - 25;
     //printk("TAG: %i\r\n", (int)acc_reading[0]);
     //if (acc_reading[0]==17) {
         //printk("X: %i, Y: %i, Z: %i\r\n", x/16, y/16, z/16);
@@ -109,6 +110,6 @@ void* get_acc(const struct i2c_dt_spec dev_i2c_acc) {
     data[0] = x/16;
     data[1] = y/16;
     data[2] = z/16;
-    data[3] = t/16;
+    data[3] = t;
     return data;
 }
