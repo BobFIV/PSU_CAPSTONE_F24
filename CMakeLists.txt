@@ -11,5 +11,6 @@ project(dect-nr)
 
 target_sources(app PRIVATE src/main.c)
 target_sources(app PRIVATE src/mesh.c)
+target_sources(app PRIVATE src/mesh-root.c)
 target_sources(app PRIVATE src/dect-nr.c)
 target_sources(app PRIVATE src/uart.c)

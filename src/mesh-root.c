@@ -66,6 +66,7 @@ static void device_add(uint16_t hwid, bool locked){
 static void device_remove(device_in_list* device){
 	sys_dlist_remove(&(device->node));
 	LOG_INF("removed %d", device->hwid);
+	free(device);
 }
 
 int mesh_root(struct k_sem* mesh_sem, data_point* last_point, sys_dlist_t* device_list)
