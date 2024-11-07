@@ -37,7 +37,7 @@ static uint16_t hwid;
 data_point* current_data;
 
 
-int data_receipt_root(dect_packet data, int rssi);
+int data_receipt_root(dect_packet data, int snr);
 uint16_t device_waiting;
 bool continue_listening;
 //update_point* device_locks_mesh;
@@ -100,7 +100,6 @@ int mesh_root(struct k_sem* mesh_sem, data_point* last_point, sys_dlist_t* devic
 
 	LOG_INF("I am %u", hwid);
 	while (1) {
-		//LOG_ERR("Start");
 		LOG_INF("***********************************");
 		LOG_INF("I am %u", hwid);
 
@@ -110,13 +109,13 @@ int mesh_root(struct k_sem* mesh_sem, data_point* last_point, sys_dlist_t* devic
 			.hwid = hwid,
 			.sender_hwid = hwid,
 			.target_hwid = 0,
-			.latitude = NAN,
-			.longitude = NAN,
-			.speed = NAN,
-			.accelX = NAN,
-			.accelY = NAN,
-			.accelZ = NAN,
-			.temperature = NAN,
+			.latitude = 0,
+			.longitude = 0,
+			.speed = 0,
+			.accelX = 0,
+			.accelY = 0,
+			.accelZ = 0,
+			.temperature = 0,
 			.locked = false
 		};
 		dect_packet request_point = {
@@ -125,13 +124,13 @@ int mesh_root(struct k_sem* mesh_sem, data_point* last_point, sys_dlist_t* devic
 			.hwid = 0,
 			.sender_hwid = hwid,
 			.target_hwid = 0,
-			.latitude = NAN,
-			.longitude = NAN,
-			.speed = NAN,
-			.temperature = NAN,
-			.accelX = NAN,
-			.accelY = NAN,
-			.accelZ = NAN,
+			.latitude = 0,
+			.longitude = 0,
+			.speed = 0,
+			.temperature = 0,
+			.accelX = 0,
+			.accelY = 0,
+			.accelZ = 0,
 			.locked = false
 		};
 		dect_packet ack_packet = {
@@ -140,13 +139,13 @@ int mesh_root(struct k_sem* mesh_sem, data_point* last_point, sys_dlist_t* devic
 			.hwid = hwid,
 			.sender_hwid = 0,
 			.target_hwid = 0,
-			.latitude = NAN,
-			.longitude = NAN,
-			.temperature = NAN,
-			.accelX = NAN,
-			.accelY = NAN,
-			.accelZ = NAN,
-			.speed = NAN,
+			.latitude = 0,
+			.longitude = 0,
+			.temperature = 0,
+			.accelX = 0,
+			.accelY = 0,
+			.accelZ = 0,
+			.speed = 0,
 			.locked = false
 		};
 		dect_send(ping_point);
@@ -243,7 +242,7 @@ int mesh_root(struct k_sem* mesh_sem, data_point* last_point, sys_dlist_t* devic
 		LOG_INF("Receipt      Complete.");
 		last_point->hwid = hwid;
 		last_point->parent = 0;
-		last_point->rssi = -1024;
+		last_point->snr = -1024;
 		dk_set_led(DK_LED1, my_node->locked);
 		uart_send_data(*last_point);
 		LOG_INF("Sent my own data via UART");
@@ -262,7 +261,7 @@ int mesh_root(struct k_sem* mesh_sem, data_point* last_point, sys_dlist_t* devic
 	return 0;
 }
 
-int data_receipt_root(dect_packet data, int rssi){
+int data_receipt_root(dect_packet data, int snr){
 	if(data.is_request && data.is_ping){
 		LOG_INF("\tACK.");
 		if(data.hwid != hwid){
@@ -286,7 +285,7 @@ int data_receipt_root(dect_packet data, int rssi){
 		LOG_INF("    Temperature:    %0.6f", (double)data.temperature);
 		LOG_INF("    Accel:          [%0.2f, %0.2f, %0.2f]", (double)data.accelX, (double)data.accelY, (double)data.accelZ);
 		LOG_INF("    Speed:          %0.6f", (double)data.speed);
-		LOG_INF("    Signal:         %d", data.rssi);
+		LOG_INF("    Signal:         %d", data.snr);
 		LOG_INF("    Parent:         %d", data.op_hwid);
 		LOG_INF("    Locked:         %d", (int)data.locked);
 		data_point uart_out = {
@@ -294,15 +293,12 @@ int data_receipt_root(dect_packet data, int rssi){
 			.parent = data.op_hwid,
 			.temperature = data.temperature,
 			.speed = data.speed,
-			.rssi = data.rssi,
+			.snr = data.snr,
 			.latitude = data.latitude,
 			.longitude = data.longitude,
-			.accelX = 0.0f,
-			.accelY = -0.0f,
-			.accelZ = -0.0f,
-			.gyroX = -0.0f,
-			.gyroY = -0.0f,
-			.gyroZ = -0.0f,
+			.accelX = data.accelX,
+			.accelY = data.accelY,
+			.accelZ = data.accelZ,
 		};
 		uart_send_data(uart_out);
 		if(device_waiting == 0){

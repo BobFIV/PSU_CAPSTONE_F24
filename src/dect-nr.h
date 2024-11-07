@@ -19,18 +19,20 @@ typedef struct {
     uint16_t hwid;
     uint16_t sender_hwid;
 	uint16_t op_hwid;
-	int rssi;
-    float temperature;
-    float speed;
+	int16_t snr;
+    int8_t temperature;
+    uint8_t speed;
     float latitude;
     float longitude;
-	float accelX;
-	float accelY;
-	float accelZ;
+	int8_t accelX;
+	int8_t accelY;
+	int8_t accelZ;
 	bool locked;
 } dect_packet;
 
-typedef int (*dect_callback_t)(dect_packet, int rssi);
+
+
+typedef int (*dect_callback_t)(dect_packet, int snr);
 
 //uint16_t device_id;
 
@@ -50,7 +52,7 @@ struct phy_ctrl_field_common {
 
 
 
-void dect_data_callback(const void* data, int rssi);
+void dect_data_callback(const void* data, int snr);
 void dect_set_callback(dect_callback_t callback);
 int dect_init(void);
 int dect_close(void);

@@ -89,7 +89,7 @@ static void pdc(const uint64_t *time,
 	/* Received RSSI value is in fixed precision format Q14.1 */
 	LOG_INF("Received data (RSSI: %d.%d)",
 		(status->rssi_2 / 2), (status->rssi_2 & 0b1) * 5);
-    dect_data_callback(data, status->rssi_2);
+    dect_data_callback(data, status->snr);
 }
 
 /* Physical Data Channel CRC error notification. */
@@ -154,7 +154,7 @@ static int transmit(uint32_t handle, void *data, size_t data_len)
 	struct phy_ctrl_field_common header = {
 		.header_format = 0x0,
 		.packet_length_type = 0x0,
-		.packet_length = 0x2,
+		.packet_length = 0x1,
 		.short_network_id = (CONFIG_NETWORK_ID & 0xff),
 		.transmitter_id_hi = (device_id >> 8),
 		.transmitter_id_lo = (device_id & 0xff),
@@ -329,13 +329,13 @@ int dect_listen_cont(void){
     return err;
 }
 
-void dect_data_callback(const void* data, int rssi){
+void dect_data_callback(const void* data, int snr){
     
     dect_packet received_data = from_raw(data);
     LOG_INF("Received: %d bytes", sizeof(received_data));
     //float temperature = received_data.temperature;
     //LOG_INF("%llu Says the temperature is %.02f", received_data.hwid, (double)temperature);
-    receipt_callback(received_data, rssi);
+    receipt_callback(received_data, snr);
     
     return;
 }

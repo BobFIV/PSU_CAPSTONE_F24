@@ -59,7 +59,7 @@ int get_device_index(uint16_t input_hwid){
 }
 
 bool has_received_data;
-int data_receipt_node(dect_packet data, int rssi);
+int data_receipt_node(dect_packet data, int snr);
 uint16_t parent; //used to identify leaf nodes.
 dect_packet echo_packet;
 uint16_t root_id;
@@ -112,8 +112,8 @@ int mesh_node(data_point* sens_data, struct k_sem* mesh_sem)
 					.target_hwid = parent,
 					.latitude = -0.0f,
 					.longitude = -0.0f,
-					.speed = -0.0f,
-					.temperature = -0.0f,
+					.speed = 0,
+					.temperature = 0,
 					.op_hwid = 0,
 					.locked = false
 				};
@@ -146,7 +146,7 @@ int mesh_node(data_point* sens_data, struct k_sem* mesh_sem)
 			.longitude = sensor_data->longitude,
 			.speed = sensor_data->speed,
 			.temperature = sensor_data->temperature,
-			.rssi = sensor_data->rssi,
+			.snr = sensor_data->snr,
 			.accelX = sensor_data->accelX,
 			.accelY = sensor_data->accelY,
 			.accelZ = sensor_data->accelZ,
@@ -228,7 +228,7 @@ int mesh_node(data_point* sens_data, struct k_sem* mesh_sem)
 	return 0;
 }
 
-int data_receipt_node(dect_packet data, int rssi){
+int data_receipt_node(dect_packet data, int snr){
 	dect_packet in_data = data;
 	// if(in_data.sender_hwid == 17754051359676071216){
 	// 	return 0;
@@ -256,7 +256,7 @@ int data_receipt_node(dect_packet data, int rssi){
 			parent = in_data.sender_hwid;
 			root_id = in_data.hwid;
 			LOG_INF("Ping received! parent %u, gparent %u", parent, in_data.target_hwid); // parent of sender is in target, will call this "grandparent"
-			sensor_data->rssi = rssi;
+			sensor_data->snr = snr;
 		} else if(!has_a_child && in_data.target_hwid == hwid){ //if it hears a ping from a node that claims it as parent, it has a child
 			has_a_child = true;
 		}

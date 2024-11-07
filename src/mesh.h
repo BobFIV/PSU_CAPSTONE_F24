@@ -3,25 +3,23 @@
 #include <stdlib.h>
 
 typedef struct {
-    int rssi;
+    int16_t snr;
     uint16_t hwid;
     uint16_t parent;
     float latitude;
     float longitude;
-    float temperature;
-    float speed;
-    float accelX;
-    float accelY;
-    float accelZ;
-    float gyroX;
-    float gyroY;
-    float gyroZ;
+    int8_t temperature;
+    uint8_t speed;
+    int8_t accelX;
+    int8_t accelY;
+    int8_t accelZ;
 } data_point;
 typedef struct {
     uint16_t hwid;
     bool locked;
 } update_point;
 
+//int a = sizeof(data_point);
 
 #define WAIT_BEFORE_NEXT_CYCLE 1600
 #define ADDITIONAL_WAIT 50
