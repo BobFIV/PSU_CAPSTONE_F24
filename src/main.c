@@ -4,6 +4,10 @@
 #ifndef MESH_H_
 #include "mesh.h"
 #endif
+#ifndef MESHR_H_
+#include "mesh-root.h"
+#endif
+#include <stdlib.h>
 
 data_point point;
 LOG_MODULE_REGISTER(main_module, LOG_LEVEL_INF);
@@ -19,23 +23,44 @@ int fake_thread(data_point* dpoint){
     }
 }
 
+K_SEM_DEFINE(mesh_sem, 1, 1);
+bool is_root = false;
+
 update_point device_locks[NUM_DEVICES];
 
 
-
-K_SEM_DEFINE(mesh_sem, 1, 1);
-
+K_THREAD_DEFINE(UART_thread, 2048, uart_main, &point, &device_locks, NULL, 1, 0, 0);
 
 
-#ifndef IS_ROOT
 
-K_THREAD_DEFINE(UART_thread, 2048, uart_main, &point, NULL, NULL, 1, 0, 0);
-K_THREAD_DEFINE(MESH_thread, 2048, mesh, &point, &mesh_sem, NULL, 0, 0, 0);
 
-#else
+K_THREAD_DEFINE(MESH_thread_node, 2048, mesh_node, &point, &mesh_sem, NULL, 0, 0, 0);
 
-K_THREAD_DEFINE(UART_thread, 2048, uart_main, &device_locks, NULL, NULL, 1, 0, 0);
-K_THREAD_DEFINE(MESH_thread, 2048, mesh, &device_locks, &mesh_sem, NULL, 0, 0, 0);
 
-#endif
+
+K_THREAD_DEFINE(MESH_thread_root, 2048, mesh_root, &device_locks, &mesh_sem, NULL, 0, 0, 0);
+
+
+
+
+int switch_node_root(void){
+    if(is_root) {
+        is_root = false;
+        mesh_root_switch_init();
+        k_thread_resume(MESH_thread_root);
+        k_thread_suspend(MESH_thread_node);
+    } else {
+        is_root = true;
+        mesh_node_switch_init();
+        k_thread_resume(MESH_thread_node);
+        k_thread_suspend(MESH_thread_root);
+    }
+    return 0;
+}
+
+//#define IS_ROOT
+
+
+
+
 

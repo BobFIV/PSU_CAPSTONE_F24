@@ -21,10 +21,9 @@
 #define RECEIVE_TIMEOUT 1000
 
 /* STEP 10.1.2 - Define the receive buffer */
-static uint8_t rx_buf_data[sizeof(data_point)] = {0};
-static uint8_t rx_buff_upd[sizeof(update_point)] = {0};
+static uint8_t rx_buf_data[MAX(sizeof(data_point), sizeof(update_point))] = {0};
 static uint8_t tx_buf[sizeof(data_point)] = {0};
-update_point* device_locks_uart;
+update_point* device_locks_uart; // boolean array
 const struct device *uart2 = DEVICE_DT_GET(DT_NODELABEL(uart1));
 LOG_MODULE_REGISTER(UART_Module, LOG_LEVEL_INF);
 data_point* last_data_point;
@@ -69,11 +68,7 @@ static void uart_cb(const struct device *dev, struct uart_event *evt, void *user
 		}
 		break;
 	case UART_RX_DISABLED:
-		#ifdef IS_ROOT
-		uart_rx_enable(dev, rx_buff_upd, sizeof(rx_buff_upd), RECEIVE_TIMEOUT);
-		#else
 		uart_rx_enable(dev, rx_buf_data, sizeof(rx_buf_data), RECEIVE_TIMEOUT);
-		#endif
 		break;
 	default:
 		break;
@@ -88,7 +83,6 @@ int uart_send_data(data_point out_data){
 		return 1 ;
 	}
     return uart_tx(uart2, tx_buf, sizeof(tx_buf), SYS_FOREVER_MS);
-    return 0;
 }
 
 int uart_module_init(void){
@@ -106,17 +100,11 @@ int uart_module_init(void){
 }
 
 
-#ifndef IS_ROOT
-int uart_main(data_point* uart_data_point){
+
+int uart_main(data_point* uart_data_point, update_point* locks){
 	uart_module_init();
 	uart_rx_enable(uart2, rx_buf_data, sizeof(rx_buf_data), RECEIVE_TIMEOUT);
 	last_data_point = uart_data_point;
+	device_locks_uart = locks;
 	return 0;
 }
-#else
-int uart_main(update_point* locks){
-	device_locks_uart = locks;
-	uart_module_init();
-	uart_rx_enable(uart2, rx_buff_upd, sizeof(update_point), RECEIVE_TIMEOUT);
-};
-#endif

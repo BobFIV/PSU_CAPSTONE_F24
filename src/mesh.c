@@ -17,8 +17,9 @@
 #endif
 #include <dk_buttons_and_leds.h>
 #define NAN 0.0f/0.0f
+#include "main.h"
 
-LOG_MODULE_REGISTER(Main_Module, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(MeshN_Module, LOG_LEVEL_INF);
 
 
 
@@ -27,18 +28,17 @@ LOG_MODULE_REGISTER(Main_Module, LOG_LEVEL_INF);
 
 bool has_received_ping;
 bool has_a_child;
-bool has_received_vsem;
+bool has_received_request_node;
 
-#define WAIT_BEFORE_NEXT_CYCLE 5000
-#define ADDITIONAL_WAIT 50
-#define CONCURRENCY_DELAY 1
+
 
 dect_packet fwd_data;
 
-uint16_t hwid;
-uint16_t my_index;
+static uint16_t hwid;
+static uint16_t my_index;
+int timeout_counter;
 
-extern uint16_t all_devices[] = {46924U, 32048U};
+extern uint16_t all_devices[] = {46924U, 32048U, 10639U};
 
 
 
@@ -57,216 +57,16 @@ int get_device_index(uint16_t input_hwid){
 	return -1;
 }
 
-
-
-
-
-#ifdef IS_ROOT
-
-
-
-int data_receipt_root(dect_packet data, int rssi);
-uint16_t device_waiting;
-bool continue_listening;
-update_point* device_locks_mesh;
-
-static void button_handler(uint32_t button_state, uint32_t has_changed)
-{
-	/* Send a GET request or PUT request upon button triggers */
-	if (has_changed & DK_BTN1_MSK && button_state & DK_BTN1_MSK) 
-	{
-		for(int i = 0; i < NUM_DEVICES; i++){
-			if(device_locks_mesh[i].locked){
-				device_locks_mesh[i].locked = false;
-			} else {
-				device_locks_mesh[i].locked = true;
-			}
-		}
-		
-	}
-}
-
-int mesh(update_point* locks, struct k_sem* mesh_sem)
-{
-	dk_buttons_init(button_handler);
-	dk_leds_init();
-	for(int i = 0; i < NUM_DEVICES; i++){
-		update_point initial_update_point = {
-			.hwid = all_devices[i],
-			.locked = true
-		};
-		locks[i] = initial_update_point;
-		device_locks_mesh = locks;
-	}
-	dect_init();
-	hwinfo_get_device_id((void *)&hwid, sizeof(hwid));
-	dect_set_callback(&data_receipt_root);
-	bool is_connected[NUM_DEVICES] = {false};
-
-	LOG_INF("I am %u", hwid);
-	while (1) {
-		//LOG_ERR("Start");
-		LOG_INF("***********************************");
-		LOG_INF("I am %u", hwid);
-
-		dect_packet ping_point = {
-			.is_ping = true,
-			.is_vsem = false,
-			.hwid = hwid,
-			.sender_hwid = hwid,
-			.target_hwid = 0,
-			.latitude = NAN,
-			.longitude = NAN,
-			.speed = NAN,
-			.temperature = NAN,
-			.locked = false
-		};
-		dect_packet vsem_point = {
-			.is_ping = false,
-			.is_vsem = true,
-			.hwid = 0,
-			.sender_hwid = hwid,
-			.target_hwid = 0,
-			.latitude = NAN,
-			.longitude = NAN,
-			.speed = NAN,
-			.temperature = NAN,
-			.locked = false
-		};
-		dect_packet ack_packet = {
-			.is_ping = true,
-			.is_vsem = true,
-			.hwid = 0,
-			.sender_hwid = 0,
-			.target_hwid = 0,
-			.latitude = NAN,
-			.longitude = NAN,
-			.temperature = NAN,
-			.speed = NAN,
-			.locked = false
-		};
-		dect_send(ping_point);
-		
-		LOG_INF("Mesh-building Complete.");
-		k_msleep(CONCURRENCY_DELAY);
-		LOG_INF("");
-
-		// dect_packet* point_array = k_calloc(NUM_MAX_DEVICES, sizeof(dect_packet));
-		// int counter = 0;
-		// dect_packet* pointer = point_array;
-
-		/** Receiving messages for CONFIG_RX_PERIOD_MS miliseconds. */
-		for(int i = 0; i < NUM_DEVICES; i++){ // send a vsem to each device and wait for it to respond.
-			k_msleep(30); // REMOVE FOR TESTING HIGHER SPEEDS
-			vsem_point.hwid = all_devices[i];
-			vsem_point.locked = locks[i].locked;
-			device_waiting = all_devices[i];
-			if(device_waiting == hwid){
-				continue;
-			}
-			has_received_vsem = false;
-			int err = dect_send(vsem_point);
-			while (err != 0)
-			{
-				dect_send(vsem_point);
-			}
-			
-			LOG_INF("Request sent to device #%u", device_waiting);
-			
-			continue_listening = false;
-			dect_listen();
-			
-			while (continue_listening) {
-				continue_listening = false;
-				dect_listen();
-			}
-			
-			if(!has_received_vsem){
-				LOG_ERR("Timed out.");
-				is_connected[i] = false;
-			}
-			if(has_received_vsem){
-				is_connected[i] = true;
-			}
-			k_msleep(CONCURRENCY_DELAY);
-			
-			
-		}
-		dect_send(ack_packet);
-		LOG_INF("Receipt      Complete.");
-		LOG_INF("");
-		//LOG_ERR("END");
-		k_msleep(WAIT_BEFORE_NEXT_CYCLE + ADDITIONAL_WAIT);
-
-	}
-
-	dect_close();
-
-	return 0;
-}
-
-int data_receipt_root(dect_packet data, int rssi){
-	if(data.is_vsem && data.is_ping){
-		LOG_INF("\tACK.");
-	} else if(data.is_vsem){
-		LOG_INF("\tVsem.");
-	} else if(data.is_ping){
-		LOG_INF("\tPing.");
-	} else {
-		LOG_INF("\tPacket from %d to %d.", data.sender_hwid, data.target_hwid);
-	}
-	if(!data.is_ping && data.target_hwid == hwid){ //if it's not a ping, store it.
-		LOG_INF("Originator:              %u", data.hwid);
-		LOG_INF("Sender:                  %u", data.sender_hwid);
-		LOG_INF("Intended Target:         %u", data.target_hwid);
-		//LOG_INF("Actual recipient (root): %u", hwid);
-		LOG_INF("    Latitude:       %0.6f", (double)data.latitude);
-		LOG_INF("    Longitude:      %0.6f", (double)data.longitude);
-		LOG_INF("    Temperature:    %0.6f", (double)data.temperature);
-		LOG_INF("    Speed:          %0.6f", (double)data.speed);
-		LOG_INF("    Signal:         %d", data.rssi);
-		LOG_INF("    Parent:         %d", data.op_hwid);
-		LOG_INF("    Locked:         %d", (int)data.locked);
-		data_point uart_out = {
-			.hwid = data.hwid,
-			.parent = data.op_hwid,
-			.temperature = data.temperature,
-			.speed = data.speed,
-			.rssi = data.rssi,
-			.latitude = data.latitude,
-			.longitude = data.longitude,
-			.accelX = 0.0f,
-			.accelY = -0.0f,
-			.accelZ = -0.0f,
-			.gyroX = -0.0f,
-			.gyroY = -0.0f,
-			.gyroZ = -0.0f,
-		};
-		uart_send_data(uart_out);
-	} else {
-		//LOG_INF("Ping.");
-	}
-	if(device_waiting == data.hwid && !data.is_vsem && !data.is_ping && data.target_hwid == hwid){ //The data packet is the form of sending the vsem back. This is counterintuitive but it's fine.
-		has_received_vsem = true;
-	}
-	else{
-		continue_listening = true;
-	}
-	return 0;
-}
-#else
-
 bool has_received_data;
 int data_receipt_node(dect_packet data, int rssi);
 uint16_t parent; //used to identify leaf nodes.
 dect_packet echo_packet;
 uint16_t root_id;
-uint16_t device_waiting;
 bool has_received_ack;
 data_point* sensor_data;
 bool is_locked;
 
-int mesh(data_point* sens_data, struct k_sem* mesh_sem)
+int mesh_node(data_point* sens_data, struct k_sem* mesh_sem)
 {
 	dk_leds_init();
 	k_sem_take(mesh_sem, K_FOREVER);
@@ -294,8 +94,10 @@ int mesh(data_point* sens_data, struct k_sem* mesh_sem)
 		has_received_ping = false;
 		bool has_sent_ping = false;
 		has_a_child = false;
+		timeout_counter = 0;
 		while(!has_received_ping){ // wait for a ping from the parent once the device is reachable.
 			dect_listen();
+			timeout_counter++;
 			if(has_received_ping && !has_sent_ping){
 				dect_packet out_data = {
 					.is_ping = true,
@@ -312,6 +114,10 @@ int mesh(data_point* sens_data, struct k_sem* mesh_sem)
 				dect_send(out_data);
 				has_sent_ping = true;
 				LOG_INF("\tResponded.");
+			}
+			if(timeout_counter >= TIMEOUT_BECOME_ROOT/CONFIG_RX_PERIOD_MS){
+				LOG_INF("--------------------Switching to root--------------------");
+				switch_node_root();
 			}
 
 		}
@@ -345,8 +151,8 @@ int mesh(data_point* sens_data, struct k_sem* mesh_sem)
 		/** Receiving messages for CONFIG_RX_PERIOD_S seconds. */
 		while(!has_received_ack){ // listen for 1 second to allow packets to propagata back up
 			LOG_INF("Waiting for requests...");
-			has_received_vsem = false;
-			while(!has_received_vsem && !has_received_ack){
+			has_received_request_node = false;
+			while(!has_received_request_node && !has_received_ack){
 				dect_listen();
 				if(has_received_data){
 					k_msleep(CONCURRENCY_DELAY);
@@ -355,11 +161,11 @@ int mesh(data_point* sens_data, struct k_sem* mesh_sem)
 					has_received_data = false;
 				}
 			}
-			if(has_received_vsem){ //if it hasnt timed out
+			if(has_received_request_node){ //if it hasnt timed out
 				if(echo_packet.hwid != hwid){
 					echo_packet.sender_hwid = hwid;
 					dect_send(echo_packet);
-					LOG_INF("Echoing request to ...%u", echo_packet.hwid%1000); // echo the Vsem
+					LOG_INF("Echoing request to ...%u", echo_packet.hwid%1000); // echo the request
 				} else {
 					is_locked = echo_packet.locked;
 					send_point.locked = is_locked;
@@ -370,7 +176,7 @@ int mesh(data_point* sens_data, struct k_sem* mesh_sem)
 					dk_set_led(DK_LED1, is_locked);
 					echo_packet.sender_hwid = hwid;
 					dect_send(echo_packet);
-					LOG_INF("Re-sent my vsem so everyone hears it.");
+					LOG_INF("Re-sent my request so everyone hears it.");
 				}
 			} if(has_received_ack){
 				dect_send(echo_packet);
@@ -398,41 +204,41 @@ int data_receipt_node(dect_packet data, int rssi){
 	// 	return 0;
 	// 	LOG_INF("\tRoot.");
 	// }
-	if(in_data.is_vsem && in_data.is_ping){
+	if(in_data.is_request && in_data.is_ping){
 		has_received_ack = true;
 		LOG_INF("\tACK.");
 		in_data.sender_hwid = hwid;
 		in_data.target_hwid = 0;
 		echo_packet = in_data;
 	}
-	if(in_data.is_vsem){
-		LOG_INF("\tVsem.");
+	if(in_data.is_request){
+		LOG_INF("\trequest.");
 	} else if(in_data.is_ping){
 		LOG_INF("\tPing.");
 	} else {
 		LOG_INF("\tPacket.");
 	}
-	if(in_data.is_ping && !in_data.is_vsem){
+	if(in_data.is_ping && !in_data.is_request){
 		
 		//LOG_INF("\tPinged.");
 		if(!has_received_ping){
 			has_received_ping = true;
 			parent = in_data.sender_hwid;
 			root_id = in_data.hwid;
-			LOG_INF("Ping received! parent ...%u, gparent ...%u", parent%1000, in_data.target_hwid%1000); // parent of sender is in target, will call this "grandparent"
+			LOG_INF("Ping received! parent %u, gparent %u", parent, in_data.target_hwid); // parent of sender is in target, will call this "grandparent"
 			sensor_data->rssi = rssi;
 		} else if(!has_a_child && in_data.target_hwid == hwid){ //if it hears a ping from a node that claims it as parent, it has a child
 			has_a_child = true;
 		}
 		
-	} else if(in_data.is_vsem && !has_received_vsem && has_received_ping) {
-		//LOG_INF("\tVsem.");
+	} else if(in_data.is_request && !has_received_request_node && has_received_ping) {
+		//LOG_INF("\trequest.");
 		if(in_data.sender_hwid == parent){
-			has_received_vsem = true;
-			LOG_INF("Received request for ...%u", in_data.hwid%1000);
+			has_received_request_node = true;
+			LOG_INF("Received request for %u", in_data.hwid);
 			echo_packet = in_data;
 		}
-	} else if(!data.is_vsem && !data.is_ping) {
+	} else if(!data.is_request && !data.is_ping) {
 		//LOG_INF("\tPacket.");
 		//if the packet is actually meant for this device
 		if(in_data.target_hwid == hwid) { // transmit it back to the parent
@@ -448,4 +254,7 @@ int data_receipt_node(dect_packet data, int rssi){
 	return 0;
 }
 
-#endif
+int mesh_node_switch_init(void){
+	dect_set_callback(&data_receipt_node);
+	timeout_counter = 0;
+}

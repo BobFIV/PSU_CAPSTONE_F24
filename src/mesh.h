@@ -22,14 +22,15 @@ typedef struct {
 } update_point;
 
 
-#define IS_ROOT
+#define WAIT_BEFORE_NEXT_CYCLE 1600
+#define ADDITIONAL_WAIT 50
+#define CONCURRENCY_DELAY 1
+#define TIMEOUT_BECOME_ROOT 3*WAIT_BEFORE_NEXT_CYCLE
 
-#define NUM_DEVICES 2
+#define NUM_DEVICES 3
 //device list
 extern uint16_t all_devices[NUM_DEVICES];
 
-#ifndef IS_ROOT
-int mesh(data_point* sens_data, struct k_sem* mesh_sem);
-#else
-int mesh(update_point* lock_data, struct k_sem* mesh_sem);
-#endif
+
+int mesh_node(data_point* sens_data, struct k_sem* mesh_sem);
+int mesh_node_switch_init(void);

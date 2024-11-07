@@ -1,3 +1,5 @@
+
+
 #include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -5,11 +7,13 @@
 #include <modem/nrf_modem_lib.h>
 #include <zephyr/drivers/hwinfo.h>
 
+#ifndef DECTNR_H_
+
 #define DATA_LEN_MAX 64
 
 typedef struct {
     bool is_ping;
-	bool is_vsem;
+	bool is_request;
     uint16_t target_hwid;
     uint16_t hwid;
     uint16_t sender_hwid;
@@ -48,8 +52,12 @@ int dect_init(void);
 int dect_close(void);
 int dect_send_s(char* string, size_t len);
 int dect_send(dect_packet send_data);
+int dect_listen_cont(void);
 dect_packet from_raw(const void* data);
 void to_raw(dect_packet data, void* buffer);
 int dect_listen(void);
 
+#endif
+
+#define DECTNR_H_
 

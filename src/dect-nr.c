@@ -185,7 +185,7 @@ static int transmit(uint32_t handle, void *data, size_t data_len)
 }
 
 /* Receive operation. */
-static int receive(uint32_t handle)
+static int receive(uint32_t handle, bool stop_after_receipt)
 {
 	int err;
 
@@ -193,7 +193,7 @@ static int receive(uint32_t handle)
 		.start_time = 0,
 		.handle = handle,
 		.network_id = CONFIG_NETWORK_ID,
-		.mode = NRF_MODEM_DECT_PHY_RX_MODE_SINGLE_SHOT,
+		.mode = stop_after_receipt ? NRF_MODEM_DECT_PHY_RX_MODE_SINGLE_SHOT : NRF_MODEM_DECT_PHY_RX_MODE_CONTINUOUS,
 		.rssi_interval = NRF_MODEM_DECT_PHY_RSSI_INTERVAL_OFF,
 		.link_id = NRF_MODEM_DECT_PHY_LINK_UNSPECIFIED,
 		.rssi_level = 0,
@@ -305,7 +305,20 @@ int dect_send(dect_packet send_data){
 int dect_listen(void){
     int err;
     uint32_t rx_handle = 1;
-    err = receive(rx_handle);
+    err = receive(rx_handle, true);
+		if (err) {
+			LOG_ERR("Reception failed, err %d", err);
+			return err;
+		}
+
+		/* Wait for RX operation to complete. */
+	k_sem_take(&operation_sem, K_FOREVER);
+    return err;
+}
+int dect_listen_cont(void){
+	int err;
+    uint32_t rx_handle = 1;
+    err = receive(rx_handle, false);
 		if (err) {
 			LOG_ERR("Reception failed, err %d", err);
 			return err;
