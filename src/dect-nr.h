@@ -11,6 +11,7 @@
 
 #define DATA_LEN_MAX 64
 
+
 typedef struct {
     bool is_ping;
 	bool is_request;
@@ -23,6 +24,9 @@ typedef struct {
     float speed;
     float latitude;
     float longitude;
+	float accelX;
+	float accelY;
+	float accelZ;
 	bool locked;
 } dect_packet;
 

@@ -18,6 +18,7 @@
 #include <dk_buttons_and_leds.h>
 #define NAN 0.0f/0.0f
 #include "main.h"
+#include <stdlib.h>
 
 LOG_MODULE_REGISTER(MeshN_Module, LOG_LEVEL_INF);
 
@@ -29,6 +30,8 @@ LOG_MODULE_REGISTER(MeshN_Module, LOG_LEVEL_INF);
 bool has_received_ping;
 bool has_a_child;
 bool has_received_request_node;
+bool is_added;
+bool received_request_to_add;
 
 
 
@@ -38,22 +41,20 @@ static uint16_t hwid;
 static uint16_t my_index;
 int timeout_counter;
 
-extern uint16_t all_devices[] = {46924U, 32048U, 10639U};
+//extern uint16_t all_devices[] = {10639U, 32048U, 0U};
 
 
 
 
 
 
-
+void concurrency_sleep(){
+	k_usleep(CONCURRENCY_DELAY * 1000 + rand() % 4096);
+}
 
 
 int get_device_index(uint16_t input_hwid){
-	for(int i = 0; i < NUM_DEVICES; i++){
-		if(all_devices[i] == input_hwid){
-			return i;
-		}
-	}
+	
 	return -1;
 }
 
@@ -68,24 +69,27 @@ bool is_locked;
 
 int mesh_node(data_point* sens_data, struct k_sem* mesh_sem)
 {
+	is_locked = true;
 	dk_leds_init();
+	
 	k_sem_take(mesh_sem, K_FOREVER);
 	sensor_data = sens_data;
 	my_index = -1;
 	dect_init();
 	dect_set_callback(&data_receipt_node);
 	hwinfo_get_device_id((void *)&hwid, sizeof(hwid));
-	
-	for(int i = 0; i < NUM_DEVICES; i++){
-		if(all_devices[i] == hwid){
-			my_index = i;
-			LOG_INF("I am at index %d", i);
-			break;
-		}
-		if(my_index == -1){
-			LOG_ERR("Device is not in list. Please add it.");
-		}
-	}
+	LOG_INF("Init");
+	is_added = false;
+	// for(int i = 0; i < NUM_DEVICES; i++){
+	// 	if(all_devices[i] == hwid){
+	// 		my_index = i;
+	// 		LOG_INF("I am at index %d", i);
+	// 		break;
+	// 	}
+	// 	if(my_index == -1){
+	// 		LOG_ERR("Device is not in list. Please add it.");
+	// 	}
+	// }
 
 	while (1) {
 		
@@ -93,6 +97,8 @@ int mesh_node(data_point* sens_data, struct k_sem* mesh_sem)
 		LOG_INF("Waiting for ping from root.");
 		has_received_ping = false;
 		bool has_sent_ping = false;
+		is_added = false;
+		received_request_to_add = false;
 		has_a_child = false;
 		timeout_counter = 0;
 		while(!has_received_ping){ // wait for a ping from the parent once the device is reachable.
@@ -116,6 +122,7 @@ int mesh_node(data_point* sens_data, struct k_sem* mesh_sem)
 				LOG_INF("\tResponded.");
 			}
 			if(timeout_counter >= TIMEOUT_BECOME_ROOT/CONFIG_RX_PERIOD_MS){
+				k_msleep(rand() % 32);
 				LOG_INF("--------------------Switching to root--------------------");
 				switch_node_root();
 			}
@@ -140,6 +147,9 @@ int mesh_node(data_point* sens_data, struct k_sem* mesh_sem)
 			.speed = sensor_data->speed,
 			.temperature = sensor_data->temperature,
 			.rssi = sensor_data->rssi,
+			.accelX = sensor_data->accelX,
+			.accelY = sensor_data->accelY,
+			.accelZ = sensor_data->accelZ,
 			.op_hwid = parent,
 			.locked = is_locked
 		};
@@ -148,35 +158,55 @@ int mesh_node(data_point* sens_data, struct k_sem* mesh_sem)
 		LOG_INF("");
 		has_received_ack = false;
 		has_received_ping = true;
+		is_added = false;
 		/** Receiving messages for CONFIG_RX_PERIOD_S seconds. */
 		while(!has_received_ack){ // listen for 1 second to allow packets to propagata back up
+			
 			LOG_INF("Waiting for requests...");
 			has_received_request_node = false;
 			while(!has_received_request_node && !has_received_ack){
 				dect_listen();
 				if(has_received_data){
-					k_msleep(CONCURRENCY_DELAY);
+					//k_msleep(CONCURRENCY_DELAY);
+					concurrency_sleep();
 					LOG_INF("Forwarding data from %u to %u", echo_packet.sender_hwid, parent);
 					dect_send(echo_packet);
 					has_received_data = false;
 				}
 			}
 			if(has_received_request_node){ //if it hasnt timed out
-				if(echo_packet.hwid != hwid){
+				if(echo_packet.hwid == 0 && !is_added) {
+					k_msleep(1 + (rand() % 32));
+					send_point.locked = is_locked;
+					dect_send(send_point);
+					
+					LOG_INF("Received request to add myself, sent my data.");
+					concurrency_sleep();
+					is_added = true;
+					dk_set_led(DK_LED1, is_locked);
 					echo_packet.sender_hwid = hwid;
 					dect_send(echo_packet);
-					LOG_INF("Echoing request to ...%u", echo_packet.hwid%1000); // echo the request
-				} else {
+					LOG_INF("Re-sent add request so everyone hears it.");
+				} else if(echo_packet.hwid == hwid){
+					k_msleep(15);
 					is_locked = echo_packet.locked;
 					send_point.locked = is_locked;
-					k_msleep(CONCURRENCY_DELAY);
+					//k_msleep(CONCURRENCY_DELAY*2);
+					concurrency_sleep();
 					dect_send(send_point);
 					
 					LOG_INF("Received request, sent my data.");
+					concurrency_sleep();
+					is_added = true;
 					dk_set_led(DK_LED1, is_locked);
 					echo_packet.sender_hwid = hwid;
 					dect_send(echo_packet);
 					LOG_INF("Re-sent my request so everyone hears it.");
+				} else {
+					concurrency_sleep();
+					echo_packet.sender_hwid = hwid;
+					dect_send(echo_packet);
+					LOG_INF("Echoing request to ...%u", echo_packet.hwid%1000); // echo the request
 				}
 			} if(has_received_ack){
 				dect_send(echo_packet);
@@ -235,6 +265,7 @@ int data_receipt_node(dect_packet data, int rssi){
 		//LOG_INF("\trequest.");
 		if(in_data.sender_hwid == parent){
 			has_received_request_node = true;
+			received_request_to_add = (in_data.sender_hwid == 0);
 			LOG_INF("Received request for %u", in_data.hwid);
 			echo_packet = in_data;
 		}

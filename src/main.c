@@ -26,10 +26,11 @@ int fake_thread(data_point* dpoint){
 K_SEM_DEFINE(mesh_sem, 1, 1);
 bool is_root = false;
 
-update_point device_locks[NUM_DEVICES];
+//update_point device_locks[NUM_DEVICES];
+sys_dlist_t devices;
 
 
-K_THREAD_DEFINE(UART_thread, 2048, uart_main, &point, &device_locks, NULL, 1, 0, 0);
+K_THREAD_DEFINE(UART_thread, 2048, uart_main, &point, NULL, NULL, 1, 0, 0);
 
 
 
@@ -38,7 +39,7 @@ K_THREAD_DEFINE(MESH_thread_node, 2048, mesh_node, &point, &mesh_sem, NULL, 0, 0
 
 
 
-K_THREAD_DEFINE(MESH_thread_root, 2048, mesh_root, &device_locks, &mesh_sem, NULL, 0, 0, 0);
+K_THREAD_DEFINE(MESH_thread_root, 2048, mesh_root, &mesh_sem, &point, &devices, 0, 0, 0);
 
 
 

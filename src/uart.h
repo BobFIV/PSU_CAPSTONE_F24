@@ -8,6 +8,6 @@ int uart_send_data(data_point out_data);
 int uart_module_init(void);
 
 
-int uart_main(data_point* uart_data_point, update_point* locks);
+int uart_main(data_point* uart_data_point, sys_dlist_t* devices);
 
 

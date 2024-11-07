@@ -11,7 +11,11 @@
 #ifndef MESH_H_
 #include "mesh.h"
 #endif
+#ifndef MESH_R_H
+#include "mesh-root.h"
+#endif
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/dlist.h>
 
 
 /* 1000 msec = 1 sec */
@@ -23,7 +27,7 @@
 /* STEP 10.1.2 - Define the receive buffer */
 static uint8_t rx_buf_data[MAX(sizeof(data_point), sizeof(update_point))] = {0};
 static uint8_t tx_buf[sizeof(data_point)] = {0};
-update_point* device_locks_uart; // boolean array
+sys_dlist_t* device_list_uart; // devices
 const struct device *uart2 = DEVICE_DT_GET(DT_NODELABEL(uart1));
 LOG_MODULE_REGISTER(UART_Module, LOG_LEVEL_INF);
 data_point* last_data_point;
@@ -57,12 +61,11 @@ static void uart_cb(const struct device *dev, struct uart_event *evt, void *user
 		} else if(evt->data.rx.len == sizeof(update_point)){
 			void* in_data = &(evt->data.rx.buf[evt->data.rx.offset]);
 			update_point new_update_point = *((update_point*)in_data);
-			for(int i = 0; i < NUM_DEVICES; i++){
-				if(device_locks_uart[i].hwid == new_update_point.hwid){
-					device_locks_uart[i] = new_update_point;
-					break;
-				}
-				
+			
+			device_in_list* s_ptr;
+			device_in_list* current_ptr;
+			SYS_DLIST_FOR_EACH_CONTAINER_SAFE(&device_list_uart, current_ptr, s_ptr, node){
+				current_ptr->locked = new_update_point.locked;
 			}
 			LOG_INF("UART update_point received");
 		}
@@ -101,10 +104,10 @@ int uart_module_init(void){
 
 
 
-int uart_main(data_point* uart_data_point, update_point* locks){
+int uart_main(data_point* uart_data_point, sys_dlist_t* devices){
 	uart_module_init();
 	uart_rx_enable(uart2, rx_buf_data, sizeof(rx_buf_data), RECEIVE_TIMEOUT);
 	last_data_point = uart_data_point;
-	device_locks_uart = locks;
+	device_list_uart = devices;
 	return 0;
 }

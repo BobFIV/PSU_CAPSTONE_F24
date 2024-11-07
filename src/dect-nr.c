@@ -154,7 +154,7 @@ static int transmit(uint32_t handle, void *data, size_t data_len)
 	struct phy_ctrl_field_common header = {
 		.header_format = 0x0,
 		.packet_length_type = 0x0,
-		.packet_length = ((data_len << 5) + 1),
+		.packet_length = 0x2,
 		.short_network_id = (CONFIG_NETWORK_ID & 0xff),
 		.transmitter_id_hi = (device_id >> 8),
 		.transmitter_id_lo = (device_id & 0xff),

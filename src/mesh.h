@@ -1,5 +1,6 @@
 #include "dect-nr.h"
 #define MESH_H_
+#include <stdlib.h>
 
 typedef struct {
     int rssi;
@@ -29,7 +30,7 @@ typedef struct {
 
 #define NUM_DEVICES 3
 //device list
-extern uint16_t all_devices[NUM_DEVICES];
+//extern uint16_t all_devices[NUM_DEVICES];
 
 
 int mesh_node(data_point* sens_data, struct k_sem* mesh_sem);
