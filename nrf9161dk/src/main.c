@@ -27,12 +27,28 @@
 
 int resolve_address_lock = 0;
 
-struct data_point data_placeholder = {
+struct bike bike_placeholder = {
 	.temperature = 70.0f,
 	.speed = 3.2f,
 	.latitude = 40.022253f,
 	.longitude = -75.632425f
 };
+
+struct battery battery_placeholder = {
+	.lvl = 40,
+	.lowby = false
+};
+
+struct mesh_connectivity mesh_placeholder = {
+	.neibo = "00000",
+	.rssi = 1
+};
+
+struct lock lock_placeholder = {
+	.lock = true
+};
+
+union resource_data resource_placeholder;
 
 //Register this as the main module
 LOG_MODULE_REGISTER(Main_Module, LOG_LEVEL_INF);
@@ -100,6 +116,15 @@ int main(void)
 	while (1) {
 		// Wait for GNSS fix
 		k_sem_take(&gnss_fix_obtained, K_FOREVER);
+		
+		// Acquire data from GNSS receiver and sensors
+		struct nrf_modem_gnss_pvt_data_frame gnss_data = get_current_pvt();
+		bike_placeholder.latitude = gnss_data.latitude;
+		bike_placeholder.longitude = gnss_data.longitude;
+		
+		bike_placeholder.temperature = i2c_get_temp();
+
+		resource_placeholder.bikedata = bike_placeholder;
 
 		// Activate LTE
 		if (lte_lc_func_mode_set(LTE_LC_FUNC_MODE_NORMAL) != 0) {
@@ -124,15 +149,9 @@ int main(void)
 			return 0;
 		}
 
-		// Acquire data from GNSS receiver and sensors
-		struct nrf_modem_gnss_pvt_data_frame gnss_data = get_current_pvt();
-		data_placeholder.latitude = gnss_data.latitude;
-		data_placeholder.longitude = gnss_data.longitude;
-		data_placeholder.temperature = i2c_get_temp();
-
 		// Send the data to the CoAP server
-		if (client_post_send(data_placeholder) != 0) {
-			LOG_ERR("Failed to send POST request, exit...\n");
+		if (client_put_send(resource_placeholder, BIKEDATA) != 0) {
+			LOG_ERR("Failed to send PUT request, exit...\n");
 			break;
 		}
 

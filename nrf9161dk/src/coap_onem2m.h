@@ -35,29 +35,63 @@
 #define COAP_OPTION_ONEM2M_PRPI 347
 #define COAP_OPTION_ONEM2M_MSU 351
 
-/* oneM2M CoAP Content Formats */
+/* oneM2M CoAP Content Type */
 #define COAP_CONTENT_FORMAT_ONEM2M_TY_AE 2
 #define COAP_CONTENT_FORMAT_ONEM2M_TY_CONTAINER 3
 #define COAP_CONTENT_FORMAT_ONEM2M_TY_CONTAINER_INSTANCE 4
+#define COAP_CONTENT_FORMAT_ONEM2M_TY_FLEXCONTAINER 28
+
+/* CoAP Content Format*/
+#define COAP_CONTENT_FORMAT_ONEM2M_JSON 10015
 
 #define APP_COAP_VERSION 1
 #define APP_COAP_MAX_MSG_LEN 1280
 #define APP_ONEM2M_VERSION 3
 
-struct data_point {
+struct bike {
     float temperature;
     float speed;
     float latitude;
     float longitude;
 };
 
+struct battery {
+    int lvl;
+    bool lowby;
+};
+
+struct mesh_connectivity {
+    char neibo[20];
+    int rssi;
+};
+
+struct lock {
+    bool lock;
+};
+
+union resource_data {
+    struct bike bikedata;
+    struct battery batterydata;
+    struct mesh_connectivity meshdata;
+    struct lock lockdata;
+};
+
+enum resource {
+    BIKEDATA = 0,
+    BATTERY = 1,
+    MESH_CONNECTIVITY = 2,
+    LOCK = 3
+};
+
 ssize_t coap_receive(void);
-int create_request_payload(char* str_buffer, struct data_point data);
+int create_get_request_payload(char* str_buffer);
+int create_put_request_payload(char* str_buffer, union resource_data res_data, enum resource res);
+int create_request_payload(char* str_buffer, union resource_data res_data, enum resource res);
 int server_resolve(void);
 int client_init(void);
 int client_get_send(void);
-int client_put_send(struct data_point data);
-int client_post_send(struct data_point data);
+int client_put_send(union resource_data res_data, enum resource res);
+int client_post_send(union resource_data res_data, enum resource res);
 int client_handle_response(uint8_t *buf, int received);
 ssize_t onem2m_receive(void);
 void onem2m_close_socket(void);

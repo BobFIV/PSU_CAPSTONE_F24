@@ -40,12 +40,56 @@ int create_get_request_payload(char* str_buffer)
 	return 0;
 }
 
-int create_request_payload(char* str_buffer, struct data_point data)
+int create_put_request_payload(char* str_buffer, union resource_data res_data, enum resource res)
 {
-	float temperature = data.temperature;
-	float speed = data.speed;
-	float latitude = data.latitude;
-	float longitude = data.longitude;
+    char payload_str[200] = "";
+
+    switch (res) {
+        case BIKEDATA:
+			struct bike bike_placeholder = res_data.bikedata;
+
+			snprintk(payload_str, sizeof(payload_str), "{\"bdm:bikDt\": {\"tempe\": %.02f, \"speed\": %.02f, \"latie\": %.06f, \"longe\": %.06f}}",
+					 bike_placeholder.temperature, bike_placeholder.speed, bike_placeholder.latitude, bike_placeholder.longitude);
+            break;
+
+        case BATTERY:
+			struct battery battery_placeholder = res_data.batterydata;
+
+            snprintk(payload_str, sizeof(payload_str), "{\"bdm:battery\": {\"lvl\": %d, \"lowby\": %s}}",
+                     battery_placeholder.lvl, battery_placeholder.lowby ? "true" : "false");
+            break;
+
+        case MESH_CONNECTIVITY:
+			struct mesh_connectivity mesh_placeholder = res_data.meshdata;
+
+            snprintk(payload_str, sizeof(payload_str), "{\"bdm:mesh\": {\"neibo\": \"%s\", \"rssi\": %d}}",
+                     mesh_placeholder.neibo, mesh_placeholder.rssi);
+            break;
+
+        case LOCK:
+			struct lock lock_placeholder = res_data.lockdata;
+
+            snprintk(payload_str, sizeof(payload_str), "{\"bdm:lock\": {\"lock\": %s}}",
+                     lock_placeholder.lock ? "true" : "false");
+            break;
+
+        default:
+            LOG_ERR("Unknown resource type");
+            return -EINVAL;
+    }
+
+    strcpy(str_buffer, payload_str);
+    return 0;
+}
+
+int create_request_payload(char* str_buffer, union resource_data res_data, enum resource res)
+{
+	struct bike bikedata = res_data.bikedata;
+
+	float temperature = bikedata.temperature;
+	float speed = bikedata.speed;
+	float latitude = bikedata.latitude;
+	float longitude = bikedata.longitude;
 
 	LOG_INF("Temperature:  %.02f", temperature);
 	LOG_INF("Speed:        %.02f", speed);
@@ -190,8 +234,8 @@ int client_get_send(void)
 		return err;
 	}
 
-	/* Append the content format as plain text */
-	const uint8_t onem2m_json = 10015;
+	/* Append the content format as onem2m json */
+	const uint16_t onem2m_json = COAP_CONTENT_FORMAT_ONEM2M_JSON;
 	err = coap_packet_append_option(
 					&request,
 					COAP_OPTION_CONTENT_FORMAT,
@@ -281,7 +325,7 @@ int client_get_send(void)
 }
 
 /**@brief Send CoAP PUT request. */
-int client_put_send(struct data_point data)
+int client_put_send(union resource_data res_data, enum resource res)
 {
 	int err;
 	struct coap_packet request;
@@ -294,7 +338,7 @@ int client_put_send(struct data_point data)
 				coap_buf,
 				sizeof(coap_buf),
 				APP_COAP_VERSION,
-				COAP_TYPE_CON,
+				COAP_TYPE_NON_CON,
 				sizeof(next_token),
 				(uint8_t *)&next_token,
 				COAP_METHOD_PUT,  // PUT Method
@@ -307,11 +351,28 @@ int client_put_send(struct data_point data)
 		return err;
 	}
 
+	/* Append the resource path */
+	uint8_t uri_path[256];
+	switch(res) {
+		case BIKEDATA:
+			snprintk(uri_path, sizeof(uri_path), "%s/bikeData", CONFIG_COAP_TX_RESOURCE);
+			break;
+		case BATTERY:
+			snprintk(uri_path, sizeof(uri_path), "%s/battery", CONFIG_COAP_TX_RESOURCE);
+			break;
+		case MESH_CONNECTIVITY:
+			snprintk(uri_path, sizeof(uri_path), "%s/meshConnectivity", CONFIG_COAP_TX_RESOURCE);
+			break;
+		case LOCK:	
+			snprintk(uri_path, sizeof(uri_path), "%s/lock", CONFIG_COAP_TX_RESOURCE);
+			break;
+	}
+
 	err = coap_packet_append_option(
 					&request,
 					COAP_OPTION_URI_PATH,
-					(uint8_t *)CONFIG_COAP_TX_RESOURCE,
-					strlen(CONFIG_COAP_TX_RESOURCE)
+					(uint8_t *) uri_path,
+					strlen(uri_path)
 				);
 
 	if (err < 0)
@@ -320,14 +381,72 @@ int client_put_send(struct data_point data)
 		return err;
 	}
 
-	/* Append the content format as plain text */
-	const uint8_t text_plain = COAP_CONTENT_FORMAT_TEXT_PLAIN;
+	/* Append the content format as onem2m json */
+	const uint16_t onem2m_json = COAP_CONTENT_FORMAT_ONEM2M_JSON;
 	err = coap_packet_append_option(
 					&request,
 					COAP_OPTION_CONTENT_FORMAT,
-					&text_plain,
-					sizeof(text_plain)
+					&onem2m_json,
+					sizeof(onem2m_json)
 				);
+
+	/* Append the OneM2M options */	
+	const uint8_t coap_content_format_onem2m_ty_flexcontainer = COAP_CONTENT_FORMAT_ONEM2M_TY_FLEXCONTAINER;
+	err = coap_packet_append_option(
+				&request,
+				COAP_OPTION_ONEM2M_TY,
+				(uint8_t *)&coap_content_format_onem2m_ty_flexcontainer,
+				sizeof(coap_content_format_onem2m_ty_flexcontainer)
+			);
+
+	if (err < 0)
+	{
+		LOG_ERR("Failed to encode CoAP option oneM2M TY, %d", err);
+		return err;
+	}
+
+	char app_onem2m_version[2];
+	snprintf(app_onem2m_version, sizeof(app_onem2m_version), "%d", APP_ONEM2M_VERSION);
+	err = coap_packet_append_option(
+					&request,
+					COAP_OPTION_ONEM2M_RVI,
+					(uint8_t *)&app_onem2m_version,
+					strlen(app_onem2m_version)
+				);
+
+	if (err < 0)
+	{
+		LOG_ERR("Failed to encode CoAP option oneM2M RVI, %d", err);
+		return err;
+	}
+
+	err = coap_packet_append_option(
+					&request,
+					COAP_OPTION_ONEM2M_FR,
+					(uint8_t *)originator,
+					strlen(originator)
+				);
+
+	if (err < 0)
+	{
+		LOG_ERR("Failed to encode CoAP option oneM2M FR, %d", err);
+		return err;
+	}
+
+	request_identifier = sys_rand32_get();
+	snprintf(request_identifier_str, sizeof(request_identifier_str), "%08x", request_identifier);
+	err = coap_packet_append_option(
+					&request,
+					COAP_OPTION_ONEM2M_RQI,
+					(uint8_t *)&request_identifier_str,
+					strlen(request_identifier_str)
+				);
+
+	if (err < 0)
+	{
+		LOG_ERR("Failed to encode CoAP option oneM2M RQI, %d", err);
+		return err;
+	}
 
 	/* Add the payload to the message */
 	err = coap_packet_append_payload_marker(&request);
@@ -338,11 +457,11 @@ int client_put_send(struct data_point data)
 		return err;
 	}
 
-	create_request_payload(message_buffer, data);
+	create_put_request_payload(message_buffer, res_data, res);
 	err = coap_packet_append_payload(
 					&request,
 					(uint8_t *)message_buffer,
-					sizeof(message_buffer)
+					strlen(message_buffer)
 				);
 
 	if (err < 0)
@@ -363,7 +482,7 @@ int client_put_send(struct data_point data)
 }
 
 /**@brief Send CoAP POST request. */
-int client_post_send(struct data_point data)
+int client_post_send(union resource_data res_data, enum resource res)
 {
 	int err;
 	struct coap_packet request;
@@ -390,11 +509,27 @@ int client_post_send(struct data_point data)
 	}
 
 	/* Append the resource path */
+	uint8_t uri_path[256];
+	switch(res) {
+		case BIKEDATA:
+			snprintk(uri_path, sizeof(uri_path), "%s/bikeData", CONFIG_COAP_TX_RESOURCE);
+			break;
+		case BATTERY:
+			snprintk(uri_path, sizeof(uri_path), "%s/battery", CONFIG_COAP_TX_RESOURCE);
+			break;
+		case MESH_CONNECTIVITY:
+			snprintk(uri_path, sizeof(uri_path), "%s/meshConnectivity", CONFIG_COAP_TX_RESOURCE);
+			break;
+		case LOCK:	
+			snprintk(uri_path, sizeof(uri_path), "%s/lock", CONFIG_COAP_TX_RESOURCE);
+			break;
+	}
+
 	err = coap_packet_append_option(
 					&request,
 					COAP_OPTION_URI_PATH,
-					(uint8_t *)CONFIG_COAP_TX_RESOURCE,
-					strlen(CONFIG_COAP_TX_RESOURCE)
+					(uint8_t *)uri_path,
+					strlen(uri_path)
 				);
 
 	if (err < 0)
@@ -479,7 +614,7 @@ int client_post_send(struct data_point data)
 		return err;
 	}
 
-	create_request_payload(message_buffer, data);
+	create_request_payload(message_buffer, res_data, res);
 	err = coap_packet_append_payload(
 					&request,
 					(uint8_t *)message_buffer,
