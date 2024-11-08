@@ -42,7 +42,7 @@ int create_get_request_payload(char* str_buffer)
 
 int create_put_request_payload(char* str_buffer, union resource_data res_data, enum resource res)
 {
-    char payload_str[200] = "";
+    char payload_str[200];
 
     switch (res) {
         case BIKEDATA:
@@ -55,21 +55,21 @@ int create_put_request_payload(char* str_buffer, union resource_data res_data, e
         case BATTERY:
 			struct battery battery_placeholder = res_data.batterydata;
 
-            snprintk(payload_str, sizeof(payload_str), "{\"bdm:battery\": {\"lvl\": %d, \"lowby\": %s}}",
+            snprintk(payload_str, sizeof(payload_str), "{\"cod:bat\": {\"lvl\": %d, \"lowby\": %s}}",
                      battery_placeholder.lvl, battery_placeholder.lowby ? "true" : "false");
             break;
 
         case MESH_CONNECTIVITY:
 			struct mesh_connectivity mesh_placeholder = res_data.meshdata;
 
-            snprintk(payload_str, sizeof(payload_str), "{\"bdm:mesh\": {\"neibo\": \"%s\", \"rssi\": %d}}",
+            snprintk(payload_str, sizeof(payload_str), "{\"bdm:msCoy\": {\"neibo\": \"%s\", \"rssi\": %d}}",
                      mesh_placeholder.neibo, mesh_placeholder.rssi);
             break;
 
         case LOCK:
 			struct lock lock_placeholder = res_data.lockdata;
 
-            snprintk(payload_str, sizeof(payload_str), "{\"bdm:lock\": {\"lock\": %s}}",
+            snprintk(payload_str, sizeof(payload_str), "{\"cod:lock\": {\"lock\": %s}}",
                      lock_placeholder.lock ? "true" : "false");
             break;
 
@@ -79,6 +79,7 @@ int create_put_request_payload(char* str_buffer, union resource_data res_data, e
     }
 
     strcpy(str_buffer, payload_str);
+
     return 0;
 }
 
