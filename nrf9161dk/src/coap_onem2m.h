@@ -86,12 +86,10 @@ enum resource {
 ssize_t coap_receive(void);
 int create_get_request_payload(char* str_buffer);
 int create_put_request_payload(char* str_buffer, union resource_data res_data, enum resource res);
-int create_request_payload(char* str_buffer, union resource_data res_data, enum resource res);
 int server_resolve(void);
 int client_init(void);
 int client_get_send(void);
 int client_put_send(union resource_data res_data, enum resource res);
-int client_post_send(union resource_data res_data, enum resource res);
 int client_handle_response(uint8_t *buf, int received);
 ssize_t onem2m_receive(void);
 void onem2m_close_socket(void);

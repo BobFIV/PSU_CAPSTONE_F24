@@ -58,29 +58,19 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 	/* Send a GET request or PUT request upon button triggers */
 	if (has_changed & DK_BTN1_MSK && button_state & DK_BTN1_MSK) 
 	{
-		//client_get_send();
-		data_placeholder.latitude += 0.03f;
-		data_placeholder.longitude -= 0.03f;
-		client_post_send(data_placeholder);
+		{};
 	}
-	
 	else if (has_changed & DK_BTN2_MSK && button_state & DK_BTN2_MSK)
 	{
-		data_placeholder.latitude += 0.03f;
-		data_placeholder.longitude += 0.03f;
-		client_post_send(data_placeholder);
+		{};
 	}
 	else if (has_changed & DK_BTN3_MSK && button_state & DK_BTN3_MSK)
 	{
-		data_placeholder.latitude -= 0.03f;
-		data_placeholder.longitude -= 0.03f;
-		client_post_send(data_placeholder);
+		{};
 	}
 	else if (has_changed & DK_BTN4_MSK && button_state & DK_BTN4_MSK)
 	{
-		data_placeholder.latitude -= 0.03f;
-		data_placeholder.longitude += 0.03f;
-		client_post_send(data_placeholder);
+		{};
 	}
 }
 
