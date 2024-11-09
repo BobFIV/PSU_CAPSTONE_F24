@@ -26,7 +26,7 @@
 #include <nrf_modem_gnss.h>
 #include "battery.h"
 
-int testing_mode = 0;
+int testing_mode = 2;
 
 int resolve_address_lock = 0;
 union resource_data data;
@@ -220,7 +220,7 @@ int main(void)
 			break;
 		}
 
-		if (testing_mode == 1) {
+		if (testing_mode > 0) {
 			k_sleep(K_SECONDS(60));
 		}
 
@@ -230,6 +230,10 @@ int main(void)
 		err = lte_lc_func_mode_set(LTE_LC_FUNC_MODE_DEACTIVATE_LTE);
 		if (err != 0){
 			LOG_ERR("Failed to decativate LTE and enable GNSS functional mode");
+			break;
+		}
+
+		if (testing_mode > 1) {
 			break;
 		}
 	}
