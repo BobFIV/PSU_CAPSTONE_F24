@@ -26,6 +26,8 @@
 #include <nrf_modem_gnss.h>
 #include "battery.h"
 
+int testing_mode = 0;
+
 int resolve_address_lock = 0;
 union resource_data data;
 
@@ -57,14 +59,42 @@ LOG_MODULE_REGISTER(Main_Module, LOG_LEVEL_INF);
 
 static void button_handler(uint32_t button_state, uint32_t has_changed)
 {
-	/* Send a GET request or PUT request upon button triggers */
 	if (has_changed & DK_BTN1_MSK && button_state & DK_BTN1_MSK) 
 	{
-		{};
+		int err;
+		int received;
+
+		bike_placeholder.latitude += 1.0f;
+		bike_placeholder.longitude += 1.0f;
+
+		resource_placeholder.bikedata = bike_placeholder;
+		
+		err = client_put_send(resource_placeholder, BIKEDATA);
+		if (err != 0) {
+			LOG_ERR("Failed to send PUT request...\n");
+			return;
+		}
+
+		received = onem2m_receive();
+		onem2m_parse(received);
 	}
 	else if (has_changed & DK_BTN2_MSK && button_state & DK_BTN2_MSK)
 	{
-		{};
+		int err;
+		int received;
+
+		battery_placeholder.lvl = get_battery_level();
+
+		resource_placeholder.batterydata = battery_placeholder;
+		
+		err = client_put_send(resource_placeholder, BATTERY);
+		if (err != 0) {
+			LOG_ERR("Failed to send PUT request...\n");
+			return;
+		}
+		
+		received = onem2m_receive();
+		onem2m_parse(received);
 	}
 	else if (has_changed & DK_BTN3_MSK && button_state & DK_BTN3_MSK)
 	{
@@ -78,8 +108,6 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 
 int main(void)
 {
-	
-
 	int err;
 	int received;
 
@@ -96,25 +124,25 @@ int main(void)
 	if (dk_buttons_init(button_handler) != 0) {
 		LOG_ERR("Failed to initialize the buttons library");
 	}
-	
 
-	/* Setting up the i2c device */
-	
-	
 	i2c_init_temp_probe();
 
 	battery_init();
 
-	gnss_init();
+	if (testing_mode == 0){
+		gnss_init();
+	}
 
 	while (1) {
-		// Wait for GNSS fix
-		k_sem_take(&gnss_fix_obtained, K_FOREVER);
-		
-		// Acquire data from GNSS receiver and sensors
-		struct nrf_modem_gnss_pvt_data_frame gnss_data = get_current_pvt();
-		bike_placeholder.latitude = gnss_data.latitude;
-		bike_placeholder.longitude = gnss_data.longitude;
+		if (testing_mode == 0){
+			// Wait for GNSS fix
+			k_sem_take(&gnss_fix_obtained, K_FOREVER);
+			
+			// Acquire data from GNSS receiver and sensors
+			struct nrf_modem_gnss_pvt_data_frame gnss_data = get_current_pvt();
+			bike_placeholder.latitude = gnss_data.latitude;
+			bike_placeholder.longitude = gnss_data.longitude;
+		}
 		
 		bike_placeholder.temperature = i2c_get_temp();
 
@@ -151,7 +179,7 @@ int main(void)
 			LOG_ERR("Failed to send PUT request, exit...\n");
 			break;
 		}
-
+		
 		/* Receive response from the CoAP server */
 		received = onem2m_receive();
 		if (received < 0) {
