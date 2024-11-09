@@ -98,6 +98,113 @@ int create_put_request_payload(char* str_buffer, union resource_data res_data, e
     return 0;
 }
 
+int onem2m_coap_options_helper(struct coap_packet *request, enum resource res, char* rx_or_tx)
+{
+	int err;
+	
+	// 1. Append the resource path
+	
+	uint8_t uri_path[256];
+	switch(res) {
+		case BIKEDATA:
+			snprintk(uri_path, sizeof(uri_path), "%s/bikeData", rx_or_tx);
+			break;
+		case BATTERY:
+			snprintk(uri_path, sizeof(uri_path), "%s/battery", rx_or_tx);
+			break;
+		case MESH_CONNECTIVITY:
+			snprintk(uri_path, sizeof(uri_path), "%s/meshConnectivity", rx_or_tx);
+			break;
+		case LOCK:	
+			snprintk(uri_path, sizeof(uri_path), "%s/lock", rx_or_tx);
+			break;
+	}
+
+	LOG_INF("URI path: %s", uri_path);
+
+	err = coap_packet_append_option(
+				request,
+				COAP_OPTION_URI_PATH,
+				(uint8_t *) uri_path,
+				strlen(uri_path)
+			);
+	if (err < 0) {
+		LOG_ERR("Failed to encode CoAP option URI path, %d", err);
+		return err;
+	}
+	
+	// 2. Append the CoAP content format as OneM2M JSON
+
+	const uint8_t onem2m_json = COAP_CONTENT_FORMAT_ONEM2M_JSON;
+	err = coap_packet_append_option(
+				request,
+				COAP_OPTION_CONTENT_FORMAT,
+				&onem2m_json,
+				sizeof(onem2m_json)
+			);
+	if (err < 0) {
+		LOG_ERR("Failed to encode CoAP option content format, %d", err);
+		return err;
+	}
+
+	// 3. Append the OneM2M type as FlexContainer
+
+	const uint8_t coap_content_format_onem2m_ty_flexcontainer = COAP_CONTENT_FORMAT_ONEM2M_TY_FLEXCONTAINER;
+	err = coap_packet_append_option(
+				request,
+				COAP_OPTION_ONEM2M_TY,
+				(uint8_t *)&coap_content_format_onem2m_ty_flexcontainer,
+				sizeof(coap_content_format_onem2m_ty_flexcontainer)
+			);
+	if (err < 0) {
+		LOG_ERR("Failed to encode CoAP option oneM2M TY, %d", err);
+		return err;
+	}
+
+	// 4. Append the OneM2M version as 3
+
+	char app_onem2m_version[2];
+	snprintk(app_onem2m_version, sizeof(app_onem2m_version), "%d", APP_ONEM2M_VERSION);
+	err = coap_packet_append_option(
+				request,
+				COAP_OPTION_ONEM2M_RVI,
+				(uint8_t *)&app_onem2m_version,
+				strlen(app_onem2m_version)
+			);
+	if (err < 0) {
+		LOG_ERR("Failed to encode CoAP option oneM2M RVI, %d", err);
+		return err;
+	}
+
+	// 5. Append the OneM2M originator as CAdmin
+
+	err = coap_packet_append_option(
+				request,
+				COAP_OPTION_ONEM2M_FR,
+				(uint8_t *)originator,
+				strlen(originator)
+			);
+	if (err < 0) {
+		LOG_ERR("Failed to encode CoAP option oneM2M FR, %d", err);
+		return err;
+	}
+
+	// 6. Append the OneM2M request identifier
+
+	request_identifier = sys_rand32_get();
+	snprintk(request_identifier_str, sizeof(request_identifier_str), "%08x", request_identifier);
+	err = coap_packet_append_option(
+				request,
+				COAP_OPTION_ONEM2M_RQI,
+				(uint8_t *)&request_identifier_str,
+				strlen(request_identifier_str)
+			);
+	if (err < 0) {
+		LOG_ERR("Failed to encode CoAP option oneM2M RQI, %d", err);
+		return err;
+	}
+}
+
 /**@brief Resolves the configured hostname. */
 int server_resolve(void)
 {
@@ -166,131 +273,40 @@ int client_init(void)
 /**@brief Send CoAP GET request. */
 int client_get_send(enum resource res)
 {
-	
+	int err;
 	struct coap_packet request;
-
 	next_token = sys_rand32_get();
 
-	int err = coap_packet_init(
-					&request,
-					coap_buf,
-					sizeof(coap_buf),
-					APP_COAP_VERSION,
-					COAP_TYPE_CON,
-					sizeof(next_token),
-					(uint8_t *)&next_token,
-					COAP_METHOD_GET,
-					coap_next_id()
-				);
+	// Initialize the CoAP packet
+
+	err = coap_packet_init(
+				&request,
+				coap_buf,
+				sizeof(coap_buf),
+				APP_COAP_VERSION,
+				COAP_TYPE_CON,
+				sizeof(next_token),
+				(uint8_t *)&next_token,
+				COAP_METHOD_GET,
+				coap_next_id()
+			);
 
 	if (err < 0) {
 		LOG_ERR("Failed to create CoAP request, %d", err);
 		return err;
 	}
 
-	/* Append options */
+	// Append CoAP options
 
-	/* Append the resource path */
-	uint8_t uri_path[256];
-	switch(res) {
-		case BIKEDATA:
-			snprintk(uri_path, sizeof(uri_path), "%s/bikeData", CONFIG_COAP_RX_RESOURCE);
-			break;
-		case BATTERY:
-			snprintk(uri_path, sizeof(uri_path), "%s/battery", CONFIG_COAP_RX_RESOURCE);
-			break;
-		case MESH_CONNECTIVITY:
-			snprintk(uri_path, sizeof(uri_path), "%s/meshConnectivity", CONFIG_COAP_RX_RESOURCE);
-			break;
-		case LOCK:	
-			snprintk(uri_path, sizeof(uri_path), "%s/lock", CONFIG_COAP_RX_RESOURCE);
-			break;
-	}
-	/* an option specifying the resource path */
-
-	err = coap_packet_append_option(
-				&request,
-				COAP_OPTION_URI_PATH,
-				(uint8_t *) uri_path,
-				strlen(uri_path)
-			);
-
+	err = onem2m_coap_options_helper(&request, res, CONFIG_COAP_RX_RESOURCE);
 	if (err < 0) {
-		LOG_ERR("Failed to encode CoAP option URI path, %d", err);
-		return err;
-	}
-	
-	/* Append the content format as OneM2M JSON */
-	const uint16_t onem2m_json = COAP_CONTENT_FORMAT_ONEM2M_JSON;
-	err = coap_packet_append_option(
-				&request,
-				COAP_OPTION_CONTENT_FORMAT,
-				&onem2m_json,
-				sizeof(onem2m_json)
-			);
-
-	if (err < 0) {
-		LOG_ERR("Failed to encode CoAP option content format, %d", err);
+		LOG_ERR("Failed to append CoAP options, %d", err);
 		return err;
 	}
 
-	/* Append the OneM2M options */	
-	const uint8_t coap_content_format_onem2m_ty_flexcontainer = COAP_CONTENT_FORMAT_ONEM2M_TY_FLEXCONTAINER;
-	err = coap_packet_append_option(
-				&request,
-				COAP_OPTION_ONEM2M_TY,
-				(uint8_t *)&coap_content_format_onem2m_ty_flexcontainer,
-				sizeof(coap_content_format_onem2m_ty_flexcontainer)
-			);
+	// Add the payload to the message
 
-	if (err < 0) {
-		LOG_ERR("Failed to encode CoAP option oneM2M TY, %d", err);
-		return err;
-	}
-
-	char app_onem2m_version[2];
-	snprintk(app_onem2m_version, sizeof(app_onem2m_version), "%d", APP_ONEM2M_VERSION);
-	err = coap_packet_append_option(
-				&request,
-				COAP_OPTION_ONEM2M_RVI,
-				(uint8_t *)&app_onem2m_version,
-				strlen(app_onem2m_version)
-			);
-
-	if (err < 0) {
-		LOG_ERR("Failed to encode CoAP option oneM2M RVI, %d", err);
-		return err;
-	}
-
-	err = coap_packet_append_option(
-				&request,
-				COAP_OPTION_ONEM2M_FR,
-				(uint8_t *)originator,
-				strlen(originator)
-			);
-
-	if (err < 0) {
-		LOG_ERR("Failed to encode CoAP option oneM2M FR, %d", err);
-		return err;
-	}
-
-	request_identifier = sys_rand32_get();
-	snprintk(request_identifier_str, sizeof(request_identifier_str), "%08x", request_identifier);
-	err = coap_packet_append_option(
-				&request,
-				COAP_OPTION_ONEM2M_RQI,
-				(uint8_t *)&request_identifier_str,
-				strlen(request_identifier_str)
-			);
-
-	if (err < 0) {
-		LOG_ERR("Failed to encode CoAP option oneM2M RQI, %d", err);
-		return err;
-	}
-
-	/* Add the payload to the message */
 	err = coap_packet_append_payload_marker(&request);
-
 	if (err < 0) {
 		LOG_ERR("Failed to append payload marker, %d", err);
 		return err;
@@ -302,15 +318,14 @@ int client_get_send(enum resource res)
 					(uint8_t *)message_buffer,
 					strlen(message_buffer)
 				);
-
 	if (err < 0) {
 		LOG_ERR("Failed to append payload, %d", err);
 		return err;
 	}
 
-	/* Send the configured CoAP packet */
+	// Send the configured CoAP packet
+	
 	err = send(sock, request.data, request.offset, 0);
-
 	if (err < 0) {
 		LOG_ERR("Failed to send CoAP request, %d", errno);
 		return -errno;
@@ -326,10 +341,10 @@ int client_put_send(union resource_data res_data, enum resource res)
 {
 	int err;
 	struct coap_packet request;
-
 	next_token = sys_rand32_get();
 
-	/* Initialize the CoAP packet and append the resource path */
+	// Initialize the CoAP packet
+
 	err = coap_packet_init(
 				&request,
 				coap_buf,
@@ -347,108 +362,17 @@ int client_put_send(union resource_data res_data, enum resource res)
 		return err;
 	}
 
-	/* Append options */
+	// Append CoAP options
 
-	/* Append the resource path */
-	uint8_t uri_path[256];
-	switch(res) {
-		case BIKEDATA:
-			snprintk(uri_path, sizeof(uri_path), "%s/bikeData", CONFIG_COAP_TX_RESOURCE);
-			break;
-		case BATTERY:
-			snprintk(uri_path, sizeof(uri_path), "%s/battery", CONFIG_COAP_TX_RESOURCE);
-			break;
-		case MESH_CONNECTIVITY:
-			snprintk(uri_path, sizeof(uri_path), "%s/meshConnectivity", CONFIG_COAP_TX_RESOURCE);
-			break;
-		case LOCK:	
-			snprintk(uri_path, sizeof(uri_path), "%s/lock", CONFIG_COAP_TX_RESOURCE);
-			break;
-	}
-
-	err = coap_packet_append_option(
-				&request,
-				COAP_OPTION_URI_PATH,
-				(uint8_t *) uri_path,
-				strlen(uri_path)
-			);
-
+	err = onem2m_coap_options_helper(&request, res, CONFIG_COAP_TX_RESOURCE);
 	if (err < 0) {
-		LOG_ERR("Failed to encode CoAP option URI path, %d", err);
-		return err;
-	}
-	
-	/* Append the content format as OneM2M JSON */
-	const uint16_t onem2m_json = COAP_CONTENT_FORMAT_ONEM2M_JSON;
-	err = coap_packet_append_option(
-				&request,
-				COAP_OPTION_CONTENT_FORMAT,
-				&onem2m_json,
-				sizeof(onem2m_json)
-			);
-
-	if (err < 0) {
-		LOG_ERR("Failed to encode CoAP option content format, %d", err);
+		LOG_ERR("Failed to append CoAP options, %d", err);
 		return err;
 	}
 
-	/* Append the OneM2M options */	
-	const uint8_t coap_content_format_onem2m_ty_flexcontainer = COAP_CONTENT_FORMAT_ONEM2M_TY_FLEXCONTAINER;
-	err = coap_packet_append_option(
-				&request,
-				COAP_OPTION_ONEM2M_TY,
-				(uint8_t *)&coap_content_format_onem2m_ty_flexcontainer,
-				sizeof(coap_content_format_onem2m_ty_flexcontainer)
-			);
+	// Add the payload to the message
 
-	if (err < 0) {
-		LOG_ERR("Failed to encode CoAP option oneM2M TY, %d", err);
-		return err;
-	}
-
-	char app_onem2m_version[2];
-	snprintk(app_onem2m_version, sizeof(app_onem2m_version), "%d", APP_ONEM2M_VERSION);
-	err = coap_packet_append_option(
-				&request,
-				COAP_OPTION_ONEM2M_RVI,
-				(uint8_t *)&app_onem2m_version,
-				strlen(app_onem2m_version)
-			);
-
-	if (err < 0) {
-		LOG_ERR("Failed to encode CoAP option oneM2M RVI, %d", err);
-		return err;
-	}
-
-	err = coap_packet_append_option(
-				&request,
-				COAP_OPTION_ONEM2M_FR,
-				(uint8_t *)originator,
-				strlen(originator)
-			);
-
-	if (err < 0) {
-		LOG_ERR("Failed to encode CoAP option oneM2M FR, %d", err);
-		return err;
-	}
-
-	request_identifier = sys_rand32_get();
-	snprintk(request_identifier_str, sizeof(request_identifier_str), "%08x", request_identifier);
-	err = coap_packet_append_option(
-				&request,
-				COAP_OPTION_ONEM2M_RQI,
-				(uint8_t *)&request_identifier_str,
-				strlen(request_identifier_str)
-			);
-
-	if (err < 0) {
-		LOG_ERR("Failed to encode CoAP option oneM2M RQI, %d", err);
-		return err;
-	}
-
-	/* Add the payload to the message */
 	err = coap_packet_append_payload_marker(&request);
-
 	if (err < 0) {
 		LOG_ERR("Failed to append payload marker, %d", err);
 		return err;
@@ -460,11 +384,12 @@ int client_put_send(union resource_data res_data, enum resource res)
 				(uint8_t *)message_buffer,
 				strlen(message_buffer)
 			);
-
 	if (err < 0) {
 		LOG_ERR("Failed to append payload, %d", err);
 		return err;
 	}
+
+	// Send the CoAP packet
 
 	err = send(sock, request.data, request.offset, 0);
 	if (err < 0) {

@@ -86,6 +86,7 @@ enum resource {
 ssize_t coap_receive(void);
 int create_get_request_payload(char* str_buffer, enum resource res);
 int create_put_request_payload(char* str_buffer, union resource_data res_data, enum resource res);
+int onem2m_coap_options_helper(struct coap_packet *request, enum resource res, char* rx_or_tx);
 int server_resolve(void);
 int client_init(void);
 int client_get_send(enum resource res);
