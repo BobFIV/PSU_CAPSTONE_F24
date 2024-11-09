@@ -3,6 +3,7 @@
 #include <zephyr/devicetree.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/adc.h>
+#include <math.h> // round
 #include "battery.h"
 
 static const struct adc_dt_spec adc_channel = ADC_DT_SPEC_GET(DT_PATH(zephyr_user));
@@ -54,18 +55,44 @@ int pin_read(void) {
         return -1;
     }
     
-    LOG_INF("Battery voltage: %d mV", val_mv);
+    val_mv += BATTERY_MEASUREMENT_OFFSET_MV;
+
+    // LOG_INF("Battery voltage: %d mV", val_mv);
 
     return val_mv;
 }
 
 int get_battery_level(void) {
-    int val_mv = pin_read();
-    if (val_mv < 0) {
-        return -1;
+    // Collect voltage reading samples in an array
+
+    char buf[64] = "Voltage samples (mV): ";
+    char temp[8];
+
+    int num_samples = 6;
+    int val_mv_arr[num_samples];
+
+    for (int i = 0; i < num_samples; i++) {
+        val_mv_arr[i] = pin_read();
+        snprintk(temp, sizeof(temp), "%d ", val_mv_arr[i]);
+        strcat(buf, temp);
     }
 
+    LOG_INF("%s", buf);
+
+    // Get the average of the readings
+
+    int sum = 0;
+    for (int i = 0; i < num_samples; i++) {
+        sum += val_mv_arr[i];
+    }
+
+    int val_mv = (int) round((double)sum / num_samples);
+
+    LOG_INF("Voltage average (mV): %d", val_mv);
+
+    // Calculate battery level
+
     int battery_level = (val_mv - BATTERY_MIN_VOLTAGE_MV) * (100.0 / (BATTERY_MAX_VOLTAGE_MV - BATTERY_MIN_VOLTAGE_MV));
-    LOG_INF("Battery level: %d", battery_level);
+    LOG_INF("Battery level (%%): %d", battery_level);
     return battery_level;
 }
