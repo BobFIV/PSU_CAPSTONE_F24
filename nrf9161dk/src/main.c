@@ -24,8 +24,10 @@
 #include <zephyr/devicetree.h>
 #include "gnss.h"
 #include <nrf_modem_gnss.h>
+#include "battery.h"
 
 int resolve_address_lock = 0;
+union resource_data data;
 
 struct bike bike_placeholder = {
 	.temperature = 70.0f,
@@ -101,6 +103,8 @@ int main(void)
 	
 	i2c_init_temp_probe();
 
+	battery_init();
+
 	gnss_init();
 
 	while (1) {
@@ -114,7 +118,10 @@ int main(void)
 		
 		bike_placeholder.temperature = i2c_get_temp();
 
+		battery_placeholder.lvl = get_battery_level();
+
 		resource_placeholder.bikedata = bike_placeholder;
+		resource_placeholder.batterydata = battery_placeholder;
 
 		// Activate LTE
 		if (lte_lc_func_mode_set(LTE_LC_FUNC_MODE_NORMAL) != 0) {
@@ -160,6 +167,33 @@ int main(void)
 		if (err < 0) {
 			LOG_ERR("Invalid response, exit");
 			break;
+		}
+
+		// Send the data to the CoAP server
+		if (client_put_send(resource_placeholder, BATTERY) != 0) {
+			LOG_ERR("Failed to send PUT request, exit...\n");
+			break;
+		}
+
+		/* Receive response from the CoAP server */
+		received = onem2m_receive();
+		if (received < 0) {
+			LOG_ERR("Socket error: %d, exit", errno);
+			break;
+		} if (received == 0) {
+			LOG_INF("Empty datagram");
+			continue;
+		}
+
+		/* Parse the received CoAP packet */
+		err = onem2m_parse(received);
+		if (err < 0) {
+			LOG_ERR("Invalid response, exit");
+			break;
+		}
+
+		if (testing_mode == 1) {
+			k_sleep(K_SECONDS(60));
 		}
 
 		// Disconnect from the CoAP server, deactivate LTE

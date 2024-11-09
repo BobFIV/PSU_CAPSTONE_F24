@@ -1,3 +1,24 @@
+/ {
+	zephyr,user {
+		io-channels = <&adc 0>;
+	};
+};
+
+&adc {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	channel@0 {
+		reg = <0>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,input-positive = <NRF_SAADC_AIN6>; /* P0.19 for nRF916x*/
+		zephyr,input-negative = <NRF_SAADC_AIN2>; /* P0.15 for nRF916x*/
+		zephyr,resolution = <12>;
+	};
+};
+
 &i2c2 {  
     mysensor: mysensor@38{
         compatible = "i2c-device";

@@ -15,4 +15,5 @@ target_sources(app PRIVATE src/lte.c)
 target_sources(app PRIVATE src/coap_onem2m.c)
 target_sources(app PRIVATE src/i2c.c)
 target_sources(app PRIVATE src/gnss.c)
+target_sources(app PRIVATE src/battery.c)
 # NORDIC SDK APP END
