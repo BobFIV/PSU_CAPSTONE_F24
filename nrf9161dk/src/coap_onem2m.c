@@ -410,7 +410,7 @@ int client_handle_response(uint8_t *buf, int received)
 	uint16_t token_len;
 	const uint8_t *payload;
 	uint16_t payload_len;
-	uint8_t temp_buf[128];
+	uint8_t temp_buf[512];
 	/* Parse the received CoAP packet */
 	int err = coap_packet_parse(&reply, buf, received, NULL, 0);
 
