@@ -40,7 +40,7 @@ int create_get_request_payload(char* str_buffer, enum resource res)
 			snprintk(payload_str, sizeof(payload_str), "{\"bdm:bikDt\": [\"tempe\", \"speed\", \"latie\", \"longe\"]}");
 			break;
 		case BATTERY:
-			snprintk(payload_str, sizeof(payload_str), "{\"cod:bat\"}: [\"lvl\", \"lowby\"]}");
+			snprintk(payload_str, sizeof(payload_str), "{\"cod:bat\"}: [\"lvl\", \"lowBy\"]}");
 			break;
 		case MESH_CONNECTIVITY:
 			snprintk(payload_str, sizeof(payload_str), "{\"bdm:msCoy\": [\"neibo\", \"rssi\"]}");
@@ -70,7 +70,7 @@ int create_put_request_payload(char* str_buffer, union resource_data res_data, e
         case BATTERY:
 			struct battery battery_placeholder = res_data.batterydata;
 
-            snprintk(payload_str, sizeof(payload_str), "{\"cod:bat\": {\"lvl\": %d, \"lowby\": %s}}",
+            snprintk(payload_str, sizeof(payload_str), "{\"cod:bat\": {\"lvl\": %d, \"lowBy\": %s}}",
                      battery_placeholder.lvl, battery_placeholder.lowby ? "true" : "false");
             break;
 
