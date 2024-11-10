@@ -58,8 +58,10 @@ union resource_data resource_placeholder;
 //Register this as the main module
 LOG_MODULE_REGISTER(Main_Module, LOG_LEVEL_INF);
 
+// Handle for button events
 static void button_handler(uint32_t button_state, uint32_t has_changed)
 {
+	// Button 1: Send bike data
 	if (has_changed & DK_BTN1_MSK && button_state & DK_BTN1_MSK) 
 	{
 		int err;
@@ -79,6 +81,8 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 		received = onem2m_receive();
 		onem2m_parse(received);
 	}
+
+	// Button 2: Send battery data
 	else if (has_changed & DK_BTN2_MSK && button_state & DK_BTN2_MSK)
 	{
 		int err;
@@ -97,10 +101,14 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 		received = onem2m_receive();
 		onem2m_parse(received);
 	}
+
+	// Button 3: n/a
 	else if (has_changed & DK_BTN3_MSK && button_state & DK_BTN3_MSK)
 	{
 		{};
 	}
+
+	// Button 4: n/a
 	else if (has_changed & DK_BTN4_MSK && button_state & DK_BTN4_MSK)
 	{
 		{};
@@ -111,6 +119,8 @@ int main(void)
 {
 	int err;
 	int received;
+
+	// Initialization
 
 	if (dk_leds_init() != 0) {
 		LOG_ERR("Failed to initialize the LED library");
@@ -134,7 +144,12 @@ int main(void)
 		gnss_init();
 	}
 
+	// Main loop
+
 	while (1) {
+
+		// Acquire data from GNSS receiver and sensors
+
 		if (testing_mode == 0){
 			// Wait for GNSS fix
 			k_sem_take(&gnss_fix_obtained, K_FOREVER);
@@ -150,6 +165,7 @@ int main(void)
 		battery_placeholder.lvl = get_battery_level();
 
 		// Activate LTE
+
 		if (lte_lc_func_mode_set(LTE_LC_FUNC_MODE_NORMAL) != 0) {
 			LOG_ERR("Failed to activate LTE");
 			return 0;
@@ -158,8 +174,9 @@ int main(void)
 		k_sem_take(&lte_connected, K_FOREVER);
 
 		// Connect to the CoAP server
+
 		if (resolve_address_lock == 0){
-			LOG_INF("Resolving the server address\n\r");
+			LOG_INF("Resolving the server address\r");
 			if (server_resolve() != 0) {
 				LOG_ERR("Failed to resolve server name\n");
 					return 0;
@@ -181,7 +198,8 @@ int main(void)
 			break;
 		}
 		
-		/* Receive response from the CoAP server */
+		// Receive and parse response from the CoAP server
+
 		received = onem2m_receive();
 		if (received < 0) {
 			LOG_ERR("Socket error: %d, exit", errno);
@@ -191,7 +209,6 @@ int main(void)
 			continue;
 		}
 
-		/* Parse the received CoAP packet */
 		err = onem2m_parse(received);
 		if (err < 0) {
 			LOG_ERR("Invalid response, exit");
@@ -207,7 +224,8 @@ int main(void)
 			break;
 		}
 
-		/* Receive response from the CoAP server */
+		// Receive and parse response from the CoAP server
+
 		received = onem2m_receive();
 		if (received < 0) {
 			LOG_ERR("Socket error: %d, exit", errno);
@@ -217,18 +235,19 @@ int main(void)
 			continue;
 		}
 
-		/* Parse the received CoAP packet */
 		err = onem2m_parse(received);
 		if (err < 0) {
 			LOG_ERR("Invalid response, exit");
 			break;
 		}
 
+		// SLEEP
 		if (testing_mode > 0) {
 			k_sleep(K_SECONDS(60));
 		}
 
 		// Disconnect from the CoAP server, deactivate LTE
+
 		onem2m_close_socket();
 
 		err = lte_lc_func_mode_set(LTE_LC_FUNC_MODE_DEACTIVATE_LTE);

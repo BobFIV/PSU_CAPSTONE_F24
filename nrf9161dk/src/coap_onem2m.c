@@ -63,12 +63,21 @@ int create_put_request_payload(char* str_buffer, union resource_data res_data, e
         case BIKEDATA:
 			struct bike bike_placeholder = res_data.bikedata;
 
+			LOG_INF("latie: %.06f", (double) bike_placeholder.latie);
+			LOG_INF("longe: %.06f", (double) bike_placeholder.longe);
+			LOG_INF("speed: %.02f", (double) bike_placeholder.speed);
+			LOG_INF("accel: %.02f", (double) bike_placeholder.accel);
+			LOG_INF("tempe: %.02f", (double) bike_placeholder.tempe);
+
 			snprintk(payload_str, sizeof(payload_str), "{\"bdm:bikDt\": {\"latie\": %.06f, \"longe\": %.06f, \"speed\": %.01f, \"accel\": %.01f, \"tempe\": %.01f}}",
 					 (double) bike_placeholder.latie, (double) bike_placeholder.longe, (double) bike_placeholder.speed, (double) bike_placeholder.accel, (double) bike_placeholder.tempe);
             break;
 
         case BATTERY:
 			struct battery battery_placeholder = res_data.batterydata;
+
+			LOG_INF("lvl: %d", battery_placeholder.lvl);
+			LOG_INF("lowBy: %s", battery_placeholder.lowBy ? "true" : "false");
 
             snprintk(payload_str, sizeof(payload_str), "{\"cod:bat\": {\"lvl\": %d, \"lowBy\": %s}}",
                      battery_placeholder.lvl, battery_placeholder.lowBy ? "true" : "false");
@@ -237,7 +246,7 @@ int server_resolve(void)
 
 	inet_ntop(AF_INET, &server4->sin_addr.s_addr, ipv4_addr,
 		  sizeof(ipv4_addr));
-	LOG_INF("IPv4 Address found %s\n", ipv4_addr);
+	LOG_INF("IPv4 Address found %s", ipv4_addr);
 
 	/* Free the address. */
 	freeaddrinfo(result);
@@ -393,11 +402,11 @@ int client_put_send(union resource_data res_data, enum resource res)
 
 	err = send(sock, request.data, request.offset, 0);
 	if (err < 0) {
-		LOG_ERR("Failed to send CoAP request, %d\n", errno);
+		LOG_ERR("Failed to send CoAP request, %d", errno);
 		return -errno;
 	}
 
-	LOG_INF("CoAP PUT request sent: Token 0x%04x\n", next_token);
+	LOG_INF("CoAP PUT request sent: Token 0x%04x", next_token);
 
 	return 0;
 }

@@ -8,10 +8,10 @@
 
 static const struct adc_dt_spec adc_channel = ADC_DT_SPEC_GET(DT_PATH(zephyr_user));
 
-int16_t buf;
+int16_t adc_sample_buf;
 struct adc_sequence sequence = {
-    .buffer = &buf,
-    .buffer_size = sizeof(buf)
+    .buffer = &adc_sample_buf,
+    .buffer_size = sizeof(adc_sample_buf)
 };
 
 LOG_MODULE_REGISTER(Battery_Module, LOG_LEVEL_INF);
@@ -48,7 +48,7 @@ int pin_read(void) {
         return -1;
     }
 
-    val_mv = (int) buf;
+    val_mv = (int) adc_sample_buf;
 
     err = adc_raw_to_millivolts_dt(&adc_channel, &val_mv);
     if (err < 0) {
@@ -57,27 +57,26 @@ int pin_read(void) {
     
     val_mv += BATTERY_MEASUREMENT_OFFSET_MV;
 
-    // LOG_INF("Battery voltage: %d mV", val_mv);
-
     return val_mv;
 }
 
 int get_battery_level(void) {
     // Collect voltage reading samples in an array
 
-    char buf[64] = "Voltage samples (mV): ";
-    char temp[8];
+    char str_buf[64] = "Voltage samples (mV): ";
+    char str_temp[8];
 
     int num_samples = 6;
     int val_mv_arr[num_samples];
 
     for (int i = 0; i < num_samples; i++) {
         val_mv_arr[i] = pin_read();
-        snprintk(temp, sizeof(temp), "%d ", val_mv_arr[i]);
-        strcat(buf, temp);
+        
+        snprintk(str_temp, sizeof(str_temp), "%d ", val_mv_arr[i]);
+        strcat(str_buf, str_temp);
     }
 
-    LOG_INF("%s", buf);
+    LOG_INF("%s", str_buf);
 
     // Get the average of the readings
 
