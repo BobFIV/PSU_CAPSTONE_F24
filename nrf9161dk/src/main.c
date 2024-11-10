@@ -148,9 +148,6 @@ int main(void)
 
 		battery_placeholder.lvl = get_battery_level();
 
-		resource_placeholder.bikedata = bike_placeholder;
-		resource_placeholder.batterydata = battery_placeholder;
-
 		// Activate LTE
 		if (lte_lc_func_mode_set(LTE_LC_FUNC_MODE_NORMAL) != 0) {
 			LOG_ERR("Failed to activate LTE");
@@ -175,6 +172,9 @@ int main(void)
 		}
 
 		// Send the data to the CoAP server
+
+		resource_placeholder.bikedata = bike_placeholder;
+
 		if (client_put_send(resource_placeholder, BIKEDATA) != 0) {
 			LOG_ERR("Failed to send PUT request, exit...\n");
 			break;
@@ -198,6 +198,9 @@ int main(void)
 		}
 
 		// Send the data to the CoAP server
+
+		resource_placeholder.batterydata = battery_placeholder;
+
 		if (client_put_send(resource_placeholder, BATTERY) != 0) {
 			LOG_ERR("Failed to send PUT request, exit...\n");
 			break;
