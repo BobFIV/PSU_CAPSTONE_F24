@@ -49,15 +49,16 @@
 #define APP_ONEM2M_VERSION 3
 
 struct bike {
-    float temperature;
-    float speed;
-    float latitude;
-    float longitude;
+    double latie;
+    double longe;
+    double tempe;
+    double speed;
+    double accel;
 };
 
 struct battery {
     int lvl;
-    bool lowby;
+    bool lowBy;
 };
 
 struct mesh_connectivity {

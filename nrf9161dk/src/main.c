@@ -32,15 +32,16 @@ int resolve_address_lock = 0;
 union resource_data data;
 
 struct bike bike_placeholder = {
-	.temperature = 70.0f,
-	.speed = 3.2f,
-	.latitude = 40.022253f,
-	.longitude = -75.632425f
+	.latie = 40.022253,
+	.longe = -75.632425,
+	.tempe = 70.00,
+	.speed = 3.20,
+	.accel = 1.80
 };
 
 struct battery battery_placeholder = {
 	.lvl = 40,
-	.lowby = false
+	.lowBy = false
 };
 
 struct mesh_connectivity mesh_placeholder = {
@@ -64,8 +65,8 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 		int err;
 		int received;
 
-		bike_placeholder.latitude += 1.0f;
-		bike_placeholder.longitude += 1.0f;
+		bike_placeholder.latie += 1.0;
+		bike_placeholder.longe += 1.0;
 
 		resource_placeholder.bikedata = bike_placeholder;
 		
@@ -140,11 +141,11 @@ int main(void)
 			
 			// Acquire data from GNSS receiver and sensors
 			struct nrf_modem_gnss_pvt_data_frame gnss_data = get_current_pvt();
-			bike_placeholder.latitude = gnss_data.latitude;
-			bike_placeholder.longitude = gnss_data.longitude;
+			bike_placeholder.latie = gnss_data.latitude;
+			bike_placeholder.longe = gnss_data.longitude;
 		}
 		
-		bike_placeholder.temperature = i2c_get_temp();
+		bike_placeholder.tempe = i2c_get_temp();
 
 		battery_placeholder.lvl = get_battery_level();
 

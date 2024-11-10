@@ -63,15 +63,15 @@ int create_put_request_payload(char* str_buffer, union resource_data res_data, e
         case BIKEDATA:
 			struct bike bike_placeholder = res_data.bikedata;
 
-			snprintk(payload_str, sizeof(payload_str), "{\"bdm:bikDt\": {\"tempe\": %.02f, \"speed\": %.02f, \"latie\": %.06f, \"longe\": %.06f}}",
-					 bike_placeholder.temperature, bike_placeholder.speed, bike_placeholder.latitude, bike_placeholder.longitude);
+			snprintk(payload_str, sizeof(payload_str), "{\"bdm:bikDt\": {\"latie\": %.06f, \"longe\": %.06f, \"speed\": %.01f, \"accel\": %.01f, \"tempe\": %.01f}}",
+					 (double) bike_placeholder.latie, (double) bike_placeholder.longe, (double) bike_placeholder.speed, (double) bike_placeholder.accel, (double) bike_placeholder.tempe);
             break;
 
         case BATTERY:
 			struct battery battery_placeholder = res_data.batterydata;
 
             snprintk(payload_str, sizeof(payload_str), "{\"cod:bat\": {\"lvl\": %d, \"lowBy\": %s}}",
-                     battery_placeholder.lvl, battery_placeholder.lowby ? "true" : "false");
+                     battery_placeholder.lvl, battery_placeholder.lowBy ? "true" : "false");
             break;
 
         case MESH_CONNECTIVITY:
