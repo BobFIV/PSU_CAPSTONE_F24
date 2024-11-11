@@ -53,6 +53,6 @@ double i2c_get_temp(void) {
     // Convert to degrees units 
     double cTemp = temp * 0.125;
     double fTemp = cTemp * 1.8 + 32;
-    LOG_INF("Temperature (F) retrieved: %0.2f", fTemp);
-    return fTemp;
+    LOG_INF("Temperature (C) retrieved: %0.2f", cTemp);
+    return cTemp;
 }
