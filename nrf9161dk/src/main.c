@@ -115,19 +115,13 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 	}
 }
 
-int main(void)
+static void init_all(void)
 {
-	int err;
-	int received;
-
-	// Initialization
-
 	if (dk_leds_init() != 0) {
 		LOG_ERR("Failed to initialize the LED library");
 	}
 
-	err = modem_configure();
-	if (err) {
+	if (modem_configure() != 0) {
 		LOG_ERR("Failed to configure the modem");
 		return 0;
 	}
@@ -143,6 +137,16 @@ int main(void)
 	if (testing_mode == 0){
 		gnss_init();
 	}
+}
+
+int main(void)
+{
+	int err;
+	int received;
+
+	// Initialization
+
+	init_all();
 
 	// Main loop
 
