@@ -40,7 +40,7 @@ struct bike bike_placeholder = {
 };
 
 struct battery battery_placeholder = {
-	.lvl = 40,
+	.lvl = 0,
 	.lowBy = false
 };
 
@@ -161,8 +161,7 @@ int main(void)
 		}
 		
 		bike_placeholder.tempe = i2c_get_temp();
-
-		battery_placeholder.lvl = get_battery_level();
+		
 
 		// Activate LTE
 
@@ -217,28 +216,34 @@ int main(void)
 
 		// Send the data to the CoAP server
 
-		resource_placeholder.batterydata = battery_placeholder;
+		int lvl_temp = get_battery_level();
+		
+		if (lvl_temp != battery_placeholder.lvl)
+		{
+			battery_placeholder.lvl = lvl_temp;
+			resource_placeholder.batterydata = battery_placeholder;
 
-		if (client_put_send(resource_placeholder, BATTERY) != 0) {
-			LOG_ERR("Failed to send PUT request, exit...\n");
-			break;
-		}
+			if (client_put_send(resource_placeholder, BATTERY) != 0) {
+				LOG_ERR("Failed to send PUT request, exit...\n");
+				break;
+			}
 
-		// Receive and parse response from the CoAP server
+			// Receive and parse response from the CoAP server
 
-		received = onem2m_receive();
-		if (received < 0) {
-			LOG_ERR("Socket error: %d, exit", errno);
-			break;
-		} if (received == 0) {
-			LOG_INF("Empty datagram");
-			continue;
-		}
+			received = onem2m_receive();
+			if (received < 0) {
+				LOG_ERR("Socket error: %d, exit", errno);
+				break;
+			} if (received == 0) {
+				LOG_INF("Empty datagram");
+				continue;
+			}
 
-		err = onem2m_parse(received);
-		if (err < 0) {
-			LOG_ERR("Invalid response, exit");
-			break;
+			err = onem2m_parse(received);
+			if (err < 0) {
+				LOG_ERR("Invalid response, exit");
+				break;
+			}
 		}
 
 		// SLEEP
