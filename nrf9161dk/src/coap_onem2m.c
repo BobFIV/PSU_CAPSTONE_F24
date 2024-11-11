@@ -37,16 +37,16 @@ int create_get_request_payload(char* str_buffer, enum resource res)
 
 	switch (res) {
 		case BIKEDATA:
-			snprintk(payload_str, sizeof(payload_str), "{\"bdm:bikDt\": [\"tempe\", \"speed\", \"latie\", \"longe\"]}");
+			snprintk(payload_str, sizeof(payload_str), "{\"m2m:atrl\": [\"latie\", \"longe\", \"speed\", \"accel\", \"tempe\"]}");
 			break;
 		case BATTERY:
-			snprintk(payload_str, sizeof(payload_str), "{\"cod:bat\"}: [\"lvl\", \"lowBy\"]}");
+			snprintk(payload_str, sizeof(payload_str), "{\"m2m:atrl\": [\"lvl\", \"lowBy\"]}");
 			break;
 		case MESH_CONNECTIVITY:
-			snprintk(payload_str, sizeof(payload_str), "{\"bdm:msCoy\": [\"neibo\", \"rssi\"]}");
+			snprintk(payload_str, sizeof(payload_str), "{\"m2m:atrl\": [\"neibo\", \"rssi\"]}");
 			break;
 		case LOCK:
-			snprintk(payload_str, sizeof(payload_str), "{\"cod:lock\": [\"lock\"]}");
+			snprintk(payload_str, sizeof(payload_str), "{\"m2m:atrl\": [\"lock\"]}");
 			break;
 	}
 
