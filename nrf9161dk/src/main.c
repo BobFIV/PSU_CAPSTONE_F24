@@ -158,6 +158,7 @@ int main(void)
 			struct nrf_modem_gnss_pvt_data_frame gnss_data = get_current_pvt();
 			bike_placeholder.latie = gnss_data.latitude;
 			bike_placeholder.longe = gnss_data.longitude;
+			bike_placeholder.speed = gnss_data.speed;
 		}
 		
 		bike_placeholder.tempe = i2c_get_temp();

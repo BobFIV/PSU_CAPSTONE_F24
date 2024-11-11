@@ -21,6 +21,7 @@ void print_fix_data(struct nrf_modem_gnss_pvt_data_frame *pvt_data)
 {
 	LOG_INF("Latitude:    %.06f", pvt_data->latitude);
 	LOG_INF("Longitude:   %.06f", pvt_data->longitude);
+	LOG_INF("Speed: 	  %.02f", pvt_data->speed);
 }
 
 // Return the current PVT data
