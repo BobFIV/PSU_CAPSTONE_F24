@@ -92,6 +92,7 @@ void* i2c_get_acc() {
     int err;
     uint8_t acc_reading[7]= {0};
     uint8_t acc_sensor_reg = LIS2DUX12_OUT_TAG;
+    
     err = i2c_write_read_dt(&dev_i2c_acc,&acc_sensor_reg,1,&acc_reading[0],7);
     if (err != 0) {
         printk("Failed to write/read I2C device address %x at Reg. %x \r\n", dev_i2c_acc.addr,&acc_sensor_reg);
