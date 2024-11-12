@@ -45,7 +45,7 @@ struct battery battery_placeholder = {
 };
 
 struct mesh_connectivity mesh_placeholder = {
-	.neibo = "sink",
+	.neibo = "00000",
 	.stnr = 1,
 };
 
