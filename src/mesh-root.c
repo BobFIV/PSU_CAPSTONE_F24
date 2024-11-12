@@ -242,9 +242,17 @@ int mesh_root(struct k_sem* mesh_sem, data_point* last_point, sys_dlist_t* devic
 		LOG_INF("Receipt      Complete.");
 		last_point->hwid = hwid;
 		last_point->parent = 0;
-		last_point->snr = -1024;
+		last_point->snr = 255;
 		dk_set_led(DK_LED1, my_node->locked);
 		uart_send_data(*last_point);
+		LOG_INF("    Latitude:       %0.6f", (double)last_point->latitude);
+		LOG_INF("    Longitude:      %0.6f", (double)last_point->longitude);
+		LOG_INF("    Temperature:    %0.6f", (double)last_point->temperature);
+		LOG_INF("    Accel:          [%0.2f, %0.2f, %0.2f]", (double)last_point->accelX, (double)last_point->accelY, (double)last_point->accelZ);
+		LOG_INF("    Speed:          %0.6f", (double)last_point->speed);
+		LOG_INF("    Signal:         %d", last_point->snr);
+		LOG_INF("    Parent:         %d", last_point->parent);
+		LOG_INF("    Locked:         NA");
 		LOG_INF("Sent my own data via UART");
 		LOG_INF("");
 		//LOG_ERR("END");

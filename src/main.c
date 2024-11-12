@@ -30,7 +30,7 @@ bool is_root = false;
 sys_dlist_t devices;
 
 
-K_THREAD_DEFINE(UART_thread, 2048, uart_main, &point, NULL, NULL, 1, 0, 0);
+K_THREAD_DEFINE(UART_thread, 2048, uart_main, &point, &devices, NULL, 1, 0, 0);
 
 
 

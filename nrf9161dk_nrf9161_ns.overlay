@@ -12,5 +12,5 @@
 // You can also visit the nRF DeviceTree extension documentation at https://docs.nordicsemi.com/bundle/nrf-connect-vscode/page/guides/ncs_configure_app.html#devicetree-support-in-the-extension
 &uart1 {
     status = "okay";
-    
+    current-speed = <9600>;
 };

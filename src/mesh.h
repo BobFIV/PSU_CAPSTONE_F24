@@ -21,7 +21,7 @@ typedef struct {
 
 //int a = sizeof(data_point);
 
-#define WAIT_BEFORE_NEXT_CYCLE 1600
+#define WAIT_BEFORE_NEXT_CYCLE 5200
 #define ADDITIONAL_WAIT 50
 #define CONCURRENCY_DELAY 1
 #define TIMEOUT_BECOME_ROOT 3*WAIT_BEFORE_NEXT_CYCLE
