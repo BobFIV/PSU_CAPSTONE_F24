@@ -46,7 +46,7 @@ struct battery battery_placeholder = {
 
 struct mesh_connectivity mesh_placeholder = {
 	.neibo = "sink",
-	.rssi = 1
+	.stnr = 1,
 };
 
 struct lock lock_placeholder = {

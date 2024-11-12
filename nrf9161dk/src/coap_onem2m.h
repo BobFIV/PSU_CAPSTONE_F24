@@ -63,7 +63,7 @@ struct battery {
 
 struct mesh_connectivity {
     char neibo[20];
-    int rssi;
+    int stnr;
 };
 
 struct lock {

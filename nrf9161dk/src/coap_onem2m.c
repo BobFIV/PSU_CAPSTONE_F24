@@ -43,7 +43,7 @@ int create_get_request_payload(char* str_buffer, enum resource res)
 			snprintk(payload_str, sizeof(payload_str), "{\"m2m:atrl\": [\"lvl\", \"lowBy\"]}");
 			break;
 		case MESH_CONNECTIVITY:
-			snprintk(payload_str, sizeof(payload_str), "{\"m2m:atrl\": [\"neibo\", \"rssi\"]}");
+			snprintk(payload_str, sizeof(payload_str), "{\"m2m:atrl\": [\"neibo\", \"stnr\"]}");
 			break;
 		case LOCK:
 			snprintk(payload_str, sizeof(payload_str), "{\"m2m:atrl\": [\"lock\"]}");
@@ -87,10 +87,10 @@ int create_put_request_payload(char* str_buffer, union resource_data res_data, e
 			struct mesh_connectivity mesh_placeholder = res_data.meshdata;
 
 			LOG_INF("neibo: %s", mesh_placeholder.neibo);
-			LOG_INF("rssi: %d", mesh_placeholder.rssi);
+			LOG_INF("stnr: %d", mesh_placeholder.stnr);
 
-            snprintk(payload_str, sizeof(payload_str), "{\"bdm:msCoy\": {\"neibo\": \"%s\", \"rssi\": %d}}",
-                     mesh_placeholder.neibo, mesh_placeholder.rssi);
+            snprintk(payload_str, sizeof(payload_str), "{\"bdm:msCoy\": {\"neibo\": \"%s\", \"stnr\": %d}}",
+                     mesh_placeholder.neibo, mesh_placeholder.stnr);
             break;
 
         case LOCK:
