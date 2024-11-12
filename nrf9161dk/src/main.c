@@ -115,28 +115,38 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 	}
 }
 
-static void init_all(void)
+static int init_all(void)
 {
 	if (dk_leds_init() != 0) {
 		LOG_ERR("Failed to initialize the LED library");
+		return -1;
 	}
 
 	if (modem_configure() != 0) {
 		LOG_ERR("Failed to configure the modem");
-		return 0;
+		return -1;
 	}
 
 	if (dk_buttons_init(button_handler) != 0) {
 		LOG_ERR("Failed to initialize the buttons library");
+		return -1;
 	}
 
-	i2c_init_temp_probe();
+	if (i2c_init_temp_probe() != 0) {
+		return -1;
+	}
 
-	battery_init();
+	if (battery_init() != 0) {
+		return -1;
+	}
 
 	if (testing_mode == 0){
-		gnss_init();
+		if (gnss_init() != 0) {
+			return -1;
+		}
 	}
+
+	return 0;
 }
 
 int main(void)
@@ -146,7 +156,10 @@ int main(void)
 
 	// Initialization
 
-	init_all();
+	if (init_all() != 0) {
+		LOG_ERR("Failed to initialize the application");
+		return 0;
+	}
 
 	// Main loop
 
