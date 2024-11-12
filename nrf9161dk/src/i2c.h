@@ -1,4 +1,4 @@
-//#include <zephyr/drivers/i2c.h>
+#include <zephyr/devicetree.h>
 
 #ifndef I2C_H_
 
@@ -38,7 +38,6 @@
 
 //initialize temperature polling
 int i2c_init_temp_probe(void);
-void init_acc_probe(void);
 
 //retrieve the temperature (fahrenheit) from the device
 double i2c_get_temp(void);

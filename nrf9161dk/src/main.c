@@ -80,8 +80,8 @@ int main_sens(void)
 	/* Setting up the i2c device */
 	
 	
-	// i2c_init_temp_probe();
-	// init_acc_probe();
+	i2c_init_temp_probe();
+	init_acc_probe();
 
 	gnss_init();
 
