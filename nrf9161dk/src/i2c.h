@@ -36,6 +36,9 @@
 
 //initialize temperature polling
 int i2c_init_temp_probe(void);
+void init_acc_probe();
+void* i2c_get_acc();
+
 
 //retrieve the temperature (fahrenheit) from the device
 double i2c_get_temp(void);
