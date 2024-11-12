@@ -21,4 +21,4 @@ void gnss_event_handler(int event);
 int gnss_init(void);
 
 //Confugyre modem
-int modem_configure(void);
+// int modem_configure(void);

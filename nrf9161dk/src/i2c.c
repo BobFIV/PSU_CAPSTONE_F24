@@ -30,11 +30,11 @@ int i2c_init_temp_probe() {
     return 0;
 }
 
-void init_acc_probe() {
+void init_acc_probe(void) {
     int err;
     //static const struct i2c_dt_spec dev_i2c_temp = I2C_DT_SPEC_GET(I2C0_NODE);
 	if (!device_is_ready(dev_i2c_temp.bus)) {
-		printk("I2C bus %s is not ready!\n\r",dev_i2c_temp.bus->name);
+		LOG_ERR("I2C bus %s is not ready!\n\r",dev_i2c_temp.bus->name);
 		return -1;
 	}
 
@@ -43,21 +43,21 @@ void init_acc_probe() {
     uint8_t config1[2] = {LIS2DUX12_CONFIG_REG,LIS2DUX12_CONFIG_REG_FIFO_ENABLE};
 	err = i2c_write_dt(&dev_i2c_temp, config1, sizeof(config1));
 	if (err != 0) {
-		printk("Failed to write to I2C device address %x at Reg. %x \n", dev_i2c_temp.addr,config1[0]);
+		LOG_ERR("Failed to write to I2C device address %x at Reg. %x \n", dev_i2c_temp.addr,config1[0]);
 		return -1;
 	}
 
     uint8_t config2[2] = {LIS2DUX12_FIFO_CONFIG_REG1,LIS2DUX12_FIFO_CONFIG_REG1_25hz|LIS2DUX12_FIFO_CONFIG_REG1_pm2g};
 	err = i2c_write_dt(&dev_i2c_temp, config2, sizeof(config2));
 	if (err != 0) {
-		printk("Failed to write to I2C device address %x at Reg. %x \n", dev_i2c_temp.addr,config2[0]);
+		LOG_ERR("Failed to write to I2C device address %x at Reg. %x \n", dev_i2c_temp.addr,config2[0]);
 		return -1;
 	}
 
     uint8_t config3[2] = {LIS2DUX12_FIFO_CONFIG_REG2,LIS2DUX12_FIFO_CONFIG_REG2_continuous};
 	err = i2c_write_dt(&dev_i2c_temp, config3, sizeof(config3));
 	if (err != 0) {
-		printk("Failed to write to I2C device address %x at Reg. %x \n", dev_i2c_temp.addr,config3[0]);
+		LOG_ERR("Failed to write to I2C device address %x at Reg. %x \n", dev_i2c_temp.addr,config3[0]);
 		return -1;
 	}
     return;
@@ -90,18 +90,18 @@ double i2c_get_temp() {
 
 void* i2c_get_acc() {
     int err;
-    uint8_t acc_reading[7]= {0};
+    uint8_t acc_reading[7]= {4};
     uint8_t acc_sensor_reg = LIS2DUX12_OUT_TAG;
     err = i2c_write_read_dt(&dev_i2c_acc,&acc_sensor_reg,1,&acc_reading[0],7);
     if (err != 0) {
-        printk("Failed to write/read I2C device address %x at Reg. %x \r\n", dev_i2c_acc.addr,&acc_sensor_reg);
+        LOG_ERR("Failed to write/read I2C device address %x at Reg. %x \r\n", dev_i2c_acc.addr,&acc_sensor_reg);
     }
     int_least16_t x = (((int)acc_reading[2]&0x0F) * 256 + ((int)acc_reading[1]))*16;
     int_least16_t y = (((int)acc_reading[3]) * 256 + ((int)acc_reading[2]&0xF0));
     int_least16_t z = (((int)acc_reading[5]&0x0F) * 256 + ((int)acc_reading[4]))*16;
     int_least16_t t = (((int)acc_reading[6]) * 256 + ((int)acc_reading[5]&0xF0));
     //_Float16 temp = ((double)t)*0.045 - 25;
-    
+    LOG_INF("[%x, %x, %x, %x, %x, %x]", acc_reading[0], acc_reading[1], acc_reading[2], acc_reading[3], acc_reading[4], acc_reading[5], acc_reading[6]);
     int_least16_t* data = k_malloc(sizeof(int_least16_t)*4);
     data[0] = x/16;
     data[1] = y/16;

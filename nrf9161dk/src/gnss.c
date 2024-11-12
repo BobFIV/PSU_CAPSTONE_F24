@@ -15,21 +15,21 @@ LOG_MODULE_REGISTER(GNSS_Module, LOG_LEVEL_INF);
 struct nrf_modem_gnss_pvt_data_frame last_pvt;
 struct nrf_modem_gnss_pvt_data_frame current_pvt;
 
-//Configure the modem
-int modem_configure(void)
-{
-	int err;
+// //Configure the modem
+// int modem_configure(void)
+// {
+// 	int err;
 
-	LOG_INF("Initializing modem library");
+// 	LOG_INF("Initializing modem library");
 
-	err = nrf_modem_lib_init();
-	if (err) {
-		LOG_ERR("Failed to initialize the modem library, error: %d", err);
-		return err;
-	}
+// 	err = nrf_modem_lib_init();
+// 	if (err) {
+// 		LOG_ERR("Failed to initialize the modem library, error: %d", err);
+// 		return err;
+// 	}
 	
-	return 0;
-}
+// 	return 0;
+// }
 
 
 // Print the latitude and longitude, and other data
@@ -111,18 +111,18 @@ void gnss_event_handler(int event)
 // Initialize GNSS
 int gnss_init(void)
 {
-	int err;
-	err = modem_configure();
-	if (err) {
-		LOG_ERR("Failed to configure the modem");
-		return 0;
-	}
+	// int err;
+	// err = modem_configure();
+	// if (err) {
+	// 	LOG_ERR("Failed to configure the modem");
+	// 	return 0;
+	// }
 
 	/* STEP 8 - Activate only the GNSS stack */
-	if (lte_lc_func_mode_set(LTE_LC_FUNC_MODE_ACTIVATE_GNSS) != 0) {
-		LOG_ERR("Failed to activate GNSS functional mode");
-		return 0;
-	}
+	// if (lte_lc_func_mode_set(LTE_LC_FUNC_MODE_ACTIVATE_GNSS) != 0) {
+	// 	LOG_ERR("Failed to activate GNSS functional mode");
+	// 	return 0;
+	// }
 
 	/* STEP 9 - Register the GNSS event handler */
 	if (nrf_modem_gnss_event_handler_set(gnss_event_handler) != 0) {
