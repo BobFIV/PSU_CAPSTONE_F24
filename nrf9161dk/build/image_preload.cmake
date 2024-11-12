@@ -1,6 +1,0 @@
-# Generated file that can be used to preload variant images
-set(BOARD "nrf9161dk@1.0.0/nrf9161/ns" CACHE INTERNAL "NCS child image controlled")
-set(CONF_FILE_BUILD_TYPE "" CACHE INTERNAL "NCS child image controlled")
-set(DTC_OVERLAY_FILE "/home/jet_mouse/PSU_CAPSTONE_F24/nrf9161dk/boards/nrf9161dk_nrf9161_ns.overlay" CACHE INTERNAL "NCS child image controlled")
-set(NCS_TOOLCHAIN_VERSION "NONE" CACHE INTERNAL "NCS child image controlled")
-set(WEST_PYTHON "/home/jet_mouse/ncs/toolchains/e9dba88316/usr/local/bin/python3.9" CACHE INTERNAL "NCS child image controlled")

@@ -43,7 +43,7 @@ void init_acc_probe(const struct i2c_dt_spec dev_i2c) {
 		return -1;
 	}
 
-    uint8_t config2[2] = {LIS2DUX12_FIFO_CONFIG_REG1,LIS2DUX12_FIFO_CONFIG_REG1_25hz|LIS2DUX12_FIFO_CONFIG_REG1_pm2g};
+    uint8_t config2[2] = {LIS2DUX12_FIFO_CONFIG_REG1,LIS2DUX12_FIFO_CONFIG_REG1_6hz|LIS2DUX12_FIFO_CONFIG_REG1_pm2g};
 	err = i2c_write_dt(&dev_i2c, config2, sizeof(config2));
 	if (err != 0) {
 		printk("Failed to write to I2C device address %x at Reg. %x \n", dev_i2c.addr,config2[0]);
@@ -106,10 +106,11 @@ void* get_acc(const struct i2c_dt_spec dev_i2c_acc) {
     //if (acc_reading[0]==17) {
         //printk("X: %i, Y: %i, Z: %i\r\n", x/16, y/16, z/16);
     //}
-    int_least16_t* data = k_malloc(sizeof(int_least16_t)*4);
+    int_least16_t* data = k_malloc(sizeof(int_least16_t)*5);
     data[0] = x/16;
     data[1] = y/16;
     data[2] = z/16;
     data[3] = t;
+    data[4] = acc_reading[0];
     return data;
 }

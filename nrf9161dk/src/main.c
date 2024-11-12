@@ -139,7 +139,10 @@ int main(void)
 
 		
 		int_least16_t* data = get_acc(dev_i2c_acc);
-		printk("X: %i, Y: %i, Z: %i, T: %.2f\r\n", data[0], data[1], data[2], cTemp[0]);
+		if (data[4]==17) {
+			printk("X: %.2f Y: %.2f Z: %.2f T: %.2f\r\n", ((double)data[0])/1024.0, ((double)data[1])/1024.0, ((double)data[2])/1024.0, cTemp[0]);
+		}
+		//printk("X: %i Y: %i Z: %i T: %.2f\r\n", data[0], data[1], data[2], cTemp[0]);
 		k_free(data);
 		k_free(cTemp);
 		/*

@@ -1,2 +1,0 @@
-"nrf":"/home/jet_mouse/ncs/v2.7.0/nrf":"/home/jet_mouse/ncs/v2.7.0/nrf/sysbuild"
-"mcuboot":"/home/jet_mouse/ncs/v2.7.0/bootloader/mcuboot":"/home/jet_mouse/ncs/v2.7.0/bootloader/mcuboot/boot/zephyr/sysbuild"
