@@ -86,6 +86,9 @@ int create_put_request_payload(char* str_buffer, union resource_data res_data, e
         case MESH_CONNECTIVITY:
 			struct mesh_connectivity mesh_placeholder = res_data.meshdata;
 
+			LOG_INF("neibo: %s", mesh_placeholder.neibo);
+			LOG_INF("rssi: %d", mesh_placeholder.rssi);
+
             snprintk(payload_str, sizeof(payload_str), "{\"bdm:msCoy\": {\"neibo\": \"%s\", \"rssi\": %d}}",
                      mesh_placeholder.neibo, mesh_placeholder.rssi);
             break;

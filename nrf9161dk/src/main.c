@@ -45,7 +45,7 @@ struct battery battery_placeholder = {
 };
 
 struct mesh_connectivity mesh_placeholder = {
-	.neibo = "00000",
+	.neibo = "sink",
 	.rssi = 1
 };
 
@@ -193,7 +193,7 @@ int main(void)
 			return 0;
 		}
 
-		// Send the data to the CoAP server
+		// Send BIKEDATA to the CoAP server
 
 		resource_placeholder.bikedata = bike_placeholder;
 
@@ -219,7 +219,7 @@ int main(void)
 			break;
 		}
 
-		// Send the data to the CoAP server
+		// Send BATTERYDATA to the CoAP server, if the battery level has changed
 
 		int lvl_temp = get_battery_level();
 		
@@ -249,6 +249,32 @@ int main(void)
 				LOG_ERR("Invalid response, exit");
 				break;
 			}
+		}
+
+		// Send MESHDATA to the CoAP server
+		
+		resource_placeholder.meshdata = mesh_placeholder;
+
+		if (client_put_send(resource_placeholder, MESH_CONNECTIVITY) != 0) {
+			LOG_ERR("Failed to send PUT request, exit...\n");
+			break;
+		}
+		
+		// Receive and parse response from the CoAP server
+
+		received = onem2m_receive();
+		if (received < 0) {
+			LOG_ERR("Socket error: %d, exit", errno);
+			break;
+		} if (received == 0) {
+			LOG_INF("Empty datagram");
+			continue;
+		}
+
+		err = onem2m_parse(received);
+		if (err < 0) {
+			LOG_ERR("Invalid response, exit");
+			break;
 		}
 
 		// SLEEP
