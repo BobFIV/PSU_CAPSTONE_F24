@@ -61,6 +61,9 @@ int pin_read(void) {
 }
 
 int get_battery_level(void) {
+    // Sleep to allow for the voltage to stabilize
+    k_sleep(K_MSEC(1000));
+
     // Collect voltage reading samples in an array
 
     char str_buf[64] = "Voltage samples (mV): ";
