@@ -215,6 +215,8 @@ int onem2m_coap_options_helper(struct coap_packet *request, enum resource res, c
 		LOG_ERR("Failed to encode CoAP option oneM2M RQI, %d", err);
 		return err;
 	}
+
+	return 0;
 }
 
 /**@brief Resolves the configured hostname. */
