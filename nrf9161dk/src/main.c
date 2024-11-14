@@ -28,6 +28,8 @@
 
 int testing_mode = 2;
 
+int iteration_count = 0;
+
 int resolve_address_lock = 0;
 union resource_data data;
 
@@ -188,7 +190,13 @@ int main(void)
 			return 0;
 		}
 
-		k_sem_take(&lte_connected, K_FOREVER);
+		if (k_sem_take(&lte_connected, K_SECONDS(30)) != 0) {
+			LOG_ERR("Failed to connect to LTE network in time");
+			LOG_INF("Modem restarting\n");
+			nrf_modem_lib_shutdown();
+			nrf_modem_lib_init();
+			continue;
+		}
 
 		// Connect to the CoAP server
 
@@ -307,6 +315,15 @@ int main(void)
 
 		if (testing_mode > 1) {
 			break;
+		}
+		
+		LOG_INF("Iteration %d complete\n\n", iteration_count+1);
+		iteration_count++;
+
+		if (iteration_count % 30 == 0) {
+			LOG_INF("Modem restarting\n");
+			nrf_modem_lib_shutdown();
+			nrf_modem_lib_init();
 		}
 	}
 
