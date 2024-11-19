@@ -94,7 +94,11 @@ int get_battery_level(void) {
 
     // Calculate battery level
 
-    int battery_level = (val_mv - BATTERY_MIN_VOLTAGE_MV) * (100.0 / (BATTERY_MAX_VOLTAGE_MV - BATTERY_MIN_VOLTAGE_MV));
+    double voltage_range = BATTERY_MAX_VOLTAGE_MV - BATTERY_MIN_VOLTAGE_MV;
+    double normalized_voltage = (val_mv - BATTERY_MIN_VOLTAGE_MV) / voltage_range;
+    int battery_level = (int)round(normalized_voltage * 100.0);
+
     LOG_INF("Battery level (%%): %d", battery_level);
+    
     return battery_level;
 }
