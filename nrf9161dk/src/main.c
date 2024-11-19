@@ -27,7 +27,6 @@
 #include "battery.h"
 #include <zephyr/sys/time_units.h>
 
-int testing_mode = 2;
 
 int testing_mode = 1;
 
@@ -49,7 +48,7 @@ struct battery battery_placeholder = {
 
 struct mesh_connectivity mesh_placeholder = {
 	.neibo = "00000",
-	.stnr = 1,
+	.stnr = 0,
 };
 
 struct lock lock_placeholder = {
@@ -105,10 +104,24 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 		onem2m_parse(received, BATTERY);
 	}
 
-	// Button 3: n/a
+	// Button 3: Send mesh data
 	else if (has_changed & DK_BTN3_MSK && button_state & DK_BTN3_MSK)
 	{
-		{};
+		int err;
+		int received;
+
+		mesh_placeholder.stnr += 1;
+
+		resource_placeholder.meshdata = mesh_placeholder;
+
+		err = client_put_send(resource_placeholder, MESH_CONNECTIVITY);
+		if (err != 0) {
+			LOG_ERR("Failed to send PUT request...\n");
+			return;
+		}
+		
+		received = onem2m_receive();
+		onem2m_parse(received, MESH_CONNECTIVITY);
 	}
 
 	// Button 4: n/a
@@ -194,6 +207,16 @@ int main(void)
 
 				first_fix = true;
 			}
+		}
+		else if (testing_mode >= 1) {
+			bike_placeholder.latie = (40.791515) + ((sys_rand16_get() % 2 == 0 ? 1 : -1) * (sys_rand16_get() % 20 * 0.00001));
+			bike_placeholder.longe = (-77.870764) + ((sys_rand16_get() % 2 == 0 ? 1 : -1) * (sys_rand16_get() % 20 * 0.00001));
+			bike_placeholder.speed += ((sys_rand16_get() % 2 == 0 ? 1 : -1) * (sys_rand16_get() % 100 * 0.1));
+			if (bike_placeholder.speed < 0) {
+				bike_placeholder.speed = 0;
+			}
+
+			first_fix = true;
 		}
 
 		// Activate LTE
@@ -286,8 +309,12 @@ int main(void)
 			}
 		}
 
-		// Send MESHDATA to the CoAP server
-		
+		// Put MESHDATA to the CoAP server
+
+		if (testing_mode >= 1) {
+			mesh_placeholder.stnr += 1;
+		}
+
 		resource_placeholder.meshdata = mesh_placeholder;
 
 		if (client_put_send(resource_placeholder, MESH_CONNECTIVITY) != 0) {
@@ -348,7 +375,9 @@ int main(void)
 			break;
 		}
 
-		if (testing_mode > 1) {
+		// END OF LOOP
+
+		if (testing_mode >= 2) {
 			break;
 		}
 		
