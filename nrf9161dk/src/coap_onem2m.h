@@ -92,8 +92,8 @@ int server_resolve(void);
 int client_init(void);
 int client_get_send(enum resource res);
 int client_put_send(union resource_data res_data, enum resource res);
-int client_handle_response(uint8_t *buf, int received);
+int client_handle_response(uint8_t *buf, int received, enum resource res);
 ssize_t onem2m_receive(void);
 void onem2m_close_socket(void);
-int onem2m_parse(int received);
+int onem2m_parse(int received, enum resource res);
 

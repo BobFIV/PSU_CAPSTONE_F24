@@ -28,7 +28,7 @@
 
 int testing_mode = 2;
 
-int iteration_count = 0;
+int testing_mode = 1;
 
 int resolve_address_lock = 0;
 union resource_data data;
@@ -81,7 +81,7 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 		}
 
 		received = onem2m_receive();
-		onem2m_parse(received);
+		onem2m_parse(received, BIKEDATA);
 	}
 
 	// Button 2: Send battery data
@@ -101,7 +101,7 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 		}
 		
 		received = onem2m_receive();
-		onem2m_parse(received);
+		onem2m_parse(received, BATTERY);
 	}
 
 	// Button 3: n/a
@@ -214,7 +214,7 @@ int main(void)
 			return 0;
 		}
 
-		// Send BIKEDATA to the CoAP server
+		// Put BIKEDATA to the CoAP server
 
 		resource_placeholder.bikedata = bike_placeholder;
 
@@ -234,13 +234,13 @@ int main(void)
 			continue;
 		}
 
-		err = onem2m_parse(received);
+		err = onem2m_parse(received, BIKEDATA);
 		if (err < 0) {
 			LOG_ERR("Invalid response, exit");
 			break;
 		}
 
-		// Send BATTERYDATA to the CoAP server, if the battery level has changed
+		// Put BATTERYDATA to the CoAP server, if the battery level has changed
 
 		int lvl_temp = get_battery_level();
 		
@@ -265,7 +265,7 @@ int main(void)
 				continue;
 			}
 
-			err = onem2m_parse(received);
+			err = onem2m_parse(received, BATTERY);
 			if (err < 0) {
 				LOG_ERR("Invalid response, exit");
 				break;
@@ -292,11 +292,37 @@ int main(void)
 			continue;
 		}
 
-		err = onem2m_parse(received);
+		err = onem2m_parse(received, MESH_CONNECTIVITY);
 		if (err < 0) {
 			LOG_ERR("Invalid response, exit");
 			break;
 		}
+
+		// Get LOCKDATA from the CoAP server
+		
+		if (client_get_send(LOCK) != 0) {
+			LOG_ERR("Failed to send GET request, exit...\n");
+			break;
+		}
+		
+		// Receive and parse response from the CoAP server
+		
+		received = onem2m_receive();
+		if (received < 0) {
+			LOG_ERR("Socket error: %d, exit", errno);
+			break;
+		} if (received == 0) {
+			LOG_INF("Empty datagram");
+			continue;
+		}
+
+		err = onem2m_parse(received, LOCK);
+		if (err < 0) {
+			LOG_ERR("Invalid response, exit");
+			break;
+		}
+
+		LOG_INF("Lock status: %s", lock_placeholder.lock ? "true" : "false");
 
 		// SLEEP
 		if (testing_mode > 0) {

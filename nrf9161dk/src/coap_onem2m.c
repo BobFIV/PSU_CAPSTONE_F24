@@ -11,6 +11,7 @@
 #include "lte.h"
 #include <zephyr/net/coap.h>
 #include "coap_onem2m.h"
+#include "main.h"
 
 char message_buffer[200];
 char originator[] = "CAdmin";
@@ -417,7 +418,7 @@ int client_put_send(union resource_data res_data, enum resource res)
 }
 
 /**@brief Handles responses from the remote CoAP server. */
-int client_handle_response(uint8_t *buf, int received)
+int client_handle_response(uint8_t *buf, int received, enum resource res)
 {
 	struct coap_packet reply;
 	uint8_t token[8];
@@ -458,14 +459,26 @@ int client_handle_response(uint8_t *buf, int received)
 	LOG_INF("CoAP response: Code 0x%x, Token 0x%02x%02x, Payload: %s",
 	coap_header_get_code(&reply), token[1], token[0], (char *)temp_buf);
 
+	// Parse the response for real
+	char* str_buffer = (char *)temp_buf; 
+
+	if (res == LOCK) {
+		LOG_INF("%c", str_buffer[22]);
+		if (str_buffer[22] == 't') {
+			lock_placeholder.lock = true;
+		} 
+		else if (str_buffer[22] == 'f') {
+			lock_placeholder.lock = false;
+		}
+	}
+
 	return 0;
 }
 
-int onem2m_parse(int received)
+int onem2m_parse(int received, enum resource res)
 {
-    return client_handle_response(coap_buf, received);
+    return client_handle_response(coap_buf, received, res);
 }
-
 
 ssize_t onem2m_receive(void)
 {

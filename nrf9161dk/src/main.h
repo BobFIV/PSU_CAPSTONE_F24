@@ -1,0 +1,1 @@
+extern struct lock lock_placeholder;
