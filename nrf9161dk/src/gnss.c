@@ -45,16 +45,18 @@ void gnss_event_handler(int event)
 		if (gnss_event_count == 1) {
 			LOG_INF("Searching for GNSS Satellites....\r");
 
-			int last_satellites = 0;
+			// Count the number of tracked satellites
+
+			int last_num_satellites = 0;
 
 			for (int i = 0; i < NRF_MODEM_GNSS_MAX_SATELLITES; i++) {
 				if (last_pvt.sv[i].sv > 0) {
-					last_satellites++;
+					last_num_satellites++;
 				}
 			}
 
-			if (last_satellites > period_num_satellites) {
-				period_num_satellites = last_satellites;
+			if (last_num_satellites > period_num_satellites) {
+				period_num_satellites = last_num_satellites;
 			}
 			
 			LOG_INF("Number of satellites: %d\r", period_num_satellites);
@@ -70,6 +72,7 @@ void gnss_event_handler(int event)
 	case NRF_MODEM_GNSS_EVT_FIX:
 		LOG_INF("GNSS fix event\r");
 		gnss_event_count = 0;
+		period_num_satellites = 0;
 		break;
 
 	case NRF_MODEM_GNSS_EVT_PERIODIC_WAKEUP:
