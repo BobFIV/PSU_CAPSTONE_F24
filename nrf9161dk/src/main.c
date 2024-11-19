@@ -25,6 +25,7 @@
 #include "gnss.h"
 #include <nrf_modem_gnss.h>
 #include "battery.h"
+#include <zephyr/sys/time_units.h>
 
 int testing_mode = 2;
 
@@ -155,6 +156,7 @@ int main(void)
 {
 	int err;
 	int received;
+	uint64_t start_time, end_time, loop_duration, sleep_duration;
 
 	// Initialization
 
@@ -166,6 +168,7 @@ int main(void)
 	// Main loop
 
 	while (1) {
+		start_time = k_uptime_get();
 
 		// Acquire data from GNSS receiver and sensors
 
@@ -324,11 +327,6 @@ int main(void)
 
 		LOG_INF("Lock status: %s", lock_placeholder.lock ? "true" : "false");
 
-		// SLEEP
-		if (testing_mode > 0) {
-			k_sleep(K_SECONDS(60));
-		}
-
 		// Disconnect from the CoAP server, deactivate LTE
 
 		onem2m_close_socket();
@@ -350,6 +348,17 @@ int main(void)
 			LOG_INF("Modem restarting\n");
 			nrf_modem_lib_shutdown();
 			nrf_modem_lib_init();
+		}
+		
+		// SLEEP
+
+		end_time = k_uptime_get();
+		loop_duration = end_time - start_time;
+		sleep_duration = 60000 - loop_duration;
+		LOG_INF("Loop duration: %llu ms", loop_duration);
+
+		if (sleep_duration > 0) {
+			k_sleep(K_MSEC(sleep_duration));
 		}
 	}
 
