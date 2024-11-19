@@ -156,6 +156,7 @@ int main(void)
 {
 	int err;
 	int received;
+	int iteration_count = 0;
 	uint64_t start_time, end_time, loop_duration, sleep_duration;
 
 	// Initialization
