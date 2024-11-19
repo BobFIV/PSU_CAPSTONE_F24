@@ -5,9 +5,9 @@
 #include <zephyr/drivers/adc.h>
 #include <math.h>
 
-#define BATTERY_MAX_VOLTAGE_MV 475
-#define BATTERY_MIN_VOLTAGE_MV 400
-#define BATTERY_MEASUREMENT_OFFSET_MV -56
+#define BATTERY_MAX_VOLTAGE_MV 1440
+#define BATTERY_MIN_VOLTAGE_MV 1218
+#define BATTERY_MEASUREMENT_OFFSET_MV -54
 
 // Initialize battery monitoring
 int battery_init(void);
