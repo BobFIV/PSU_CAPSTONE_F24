@@ -35,8 +35,8 @@ int resolve_address_lock = 0;
 union resource_data data;
 
 struct bike bike_placeholder = {
-	.latie = 40.022253,
-	.longe = -75.632425,
+	.latie = 0.0,
+	.longe = 0.0,
 	.tempe = 70.00,
 	.speed = 3.20,
 	.accel = 1.80
@@ -156,6 +156,10 @@ int main(void)
 {
 	int err;
 	int received;
+	
+	struct nrf_modem_gnss_pvt_data_frame gnss_data;
+	bool first_fix = false;
+	
 	int iteration_count = 0;
 	uint64_t start_time, end_time, loop_duration, sleep_duration;
 
@@ -173,19 +177,24 @@ int main(void)
 
 		// Acquire data from GNSS receiver and sensors
 
+		int lvl_temp = get_battery_level();
+
+		bike_placeholder.tempe = i2c_get_temp();
+		
 		if (testing_mode == 0){
 			// Wait for GNSS fix
 			k_sem_take(&gnss_fix_obtained, K_FOREVER);
 			
 			// Acquire data from GNSS receiver and sensors
-			struct nrf_modem_gnss_pvt_data_frame gnss_data = get_current_pvt();
-			bike_placeholder.latie = gnss_data.latitude;
-			bike_placeholder.longe = gnss_data.longitude;
-			bike_placeholder.speed = gnss_data.speed;
+			gnss_data = get_current_pvt();
+			if (gnss_data.latitude != 0.0 || gnss_data.longitude != 0.0) {
+				bike_placeholder.latie = gnss_data.latitude;
+				bike_placeholder.longe = gnss_data.longitude;
+				bike_placeholder.speed = gnss_data.speed;
+
+				first_fix = true;
+			}
 		}
-		
-		bike_placeholder.tempe = i2c_get_temp();
-		
 
 		// Activate LTE
 
@@ -222,31 +231,32 @@ int main(void)
 
 		resource_placeholder.bikedata = bike_placeholder;
 
-		if (client_put_send(resource_placeholder, BIKEDATA) != 0) {
-			LOG_ERR("Failed to send PUT request, exit...\n");
-			break;
-		}
-		
-		// Receive and parse response from the CoAP server
+		if (first_fix) 
+		{
+			if (client_put_send(resource_placeholder, BIKEDATA) != 0) {
+				LOG_ERR("Failed to send PUT request, exit...\n");
+				break;
+			}
+			
+			// Receive and parse response from the CoAP server
 
-		received = onem2m_receive();
-		if (received < 0) {
-			LOG_ERR("Socket error: %d, exit", errno);
-			break;
-		} if (received == 0) {
-			LOG_INF("Empty datagram");
-			continue;
-		}
+			received = onem2m_receive();
+			if (received < 0) {
+				LOG_ERR("Socket error: %d, exit", errno);
+				break;
+			} if (received == 0) {
+				LOG_INF("Empty datagram");
+				continue;
+			}
 
-		err = onem2m_parse(received, BIKEDATA);
-		if (err < 0) {
-			LOG_ERR("Invalid response, exit");
-			break;
+			err = onem2m_parse(received, BIKEDATA);
+			if (err < 0) {
+				LOG_ERR("Invalid response, exit");
+				break;
+			}
 		}
 
 		// Put BATTERYDATA to the CoAP server, if the battery level has changed
-
-		int lvl_temp = get_battery_level();
 		
 		if (lvl_temp != battery_placeholder.lvl)
 		{
