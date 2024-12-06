@@ -67,11 +67,33 @@ LOG_MODULE_REGISTER(Main_Module, LOG_LEVEL_INF);
 // Handle for button events
 static void button_handler(uint32_t button_state, uint32_t has_changed)
 {
-	// Button 1: Send bike data
+	int err;
+	int received;
+
+	// Button 1: Get lock data
 	if (has_changed & DK_BTN1_MSK && button_state & DK_BTN1_MSK) 
 	{
-		int err;
-		int received;
+		LOG_INF("Button 1 pressed\n");
+
+		err = client_get_send(LOCK);
+		if (err != 0) {
+			LOG_ERR("Failed to send GET request...\n");
+			return;
+		}
+		
+		received = onem2m_receive();
+		onem2m_parse(received, LOCK);	
+
+		LOG_INF("Lock status: %s", lock_placeholder.lock ? "true" : "false");
+
+		gpio_pin_set_dt(&lockled, lock_placeholder.lock);
+
+	}
+
+	// Button 2: Send bike data
+	else if (has_changed & DK_BTN2_MSK && button_state & DK_BTN2_MSK)
+	{
+		LOG_INF("Button 2 pressed");
 
 		bike_placeholder.latie += 1.0;
 		bike_placeholder.longe += 1.0;
@@ -88,11 +110,10 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 		onem2m_parse(received, BIKEDATA);
 	}
 
-	// Button 2: Send battery data
-	else if (has_changed & DK_BTN2_MSK && button_state & DK_BTN2_MSK)
+	// Button 3: Send batter data
+	else if (has_changed & DK_BTN3_MSK && button_state & DK_BTN3_MSK)
 	{
-		int err;
-		int received;
+		LOG_INF("Button 3 pressed");
 
 		battery_placeholder.lvl = get_battery_level();
 
@@ -108,11 +129,10 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 		onem2m_parse(received, BATTERY);
 	}
 
-	// Button 3: Send mesh data
-	else if (has_changed & DK_BTN3_MSK && button_state & DK_BTN3_MSK)
+	// Button 4: Send mesh data
+	else if (has_changed & DK_BTN4_MSK && button_state & DK_BTN4_MSK)
 	{
-		int err;
-		int received;
+		LOG_INF("Button 4 pressed");
 
 		mesh_placeholder.stnr += 1;
 
@@ -126,12 +146,6 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 		
 		received = onem2m_receive();
 		onem2m_parse(received, MESH_CONNECTIVITY);
-	}
-
-	// Button 4: n/a
-	else if (has_changed & DK_BTN4_MSK && button_state & DK_BTN4_MSK)
-	{
-		{};
 	}
 }
 
