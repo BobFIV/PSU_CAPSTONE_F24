@@ -26,9 +26,13 @@
 #include <nrf_modem_gnss.h>
 #include "battery.h"
 #include <zephyr/sys/time_units.h>
+#include <zephyr/drivers/gpio.h>
 
 
 int testing_mode = 1;
+
+#define EXTERNAL_LED_NODE DT_NODELABEL(extled1)
+static const struct gpio_dt_spec lockled = GPIO_DT_SPEC_GET(EXTERNAL_LED_NODE, gpios);
 
 int resolve_address_lock = 0;
 union resource_data data;
@@ -182,6 +186,11 @@ int main(void)
 		LOG_ERR("Failed to initialize the application");
 		return 0;
 	}
+
+	gpio_pin_configure_dt(&lockled, GPIO_OUTPUT_ACTIVE);
+	gpio_pin_set_dt(&lockled, lock_placeholder.lock);
+
+	k_sleep(K_SECONDS(3));
 
 	// Main loop
 
@@ -364,6 +373,8 @@ int main(void)
 		}
 
 		LOG_INF("Lock status: %s", lock_placeholder.lock ? "true" : "false");
+
+		gpio_pin_set_dt(&lockled, lock_placeholder.lock);
 
 		// Disconnect from the CoAP server, deactivate LTE
 
