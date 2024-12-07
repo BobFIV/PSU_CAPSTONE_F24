@@ -242,7 +242,7 @@ int main(void)
 		// Activate LTE
 		if (lte_lc_func_mode_set(LTE_LC_FUNC_MODE_NORMAL) != 0) {
 			LOG_ERR("Failed to activate LTE");
-			return 0;
+			continue;
 		}
 
 		if (k_sem_take(&lte_connected, K_SECONDS(30)) != 0) {
@@ -258,14 +258,14 @@ int main(void)
 			LOG_INF("Resolving the server address\r");
 			if (server_resolve() != 0) {
 				LOG_ERR("Failed to resolve server name\n");
-					return 0;
+				continue;
 			}
 			resolve_address_lock = 1;
 		}
 
 		if (client_init() != 0) {
 			LOG_INF("Failed to initialize CoAP client");
-			return 0;
+			continue;
 		}
 
 		// Put BIKEDATA to the CoAP server
@@ -300,15 +300,15 @@ int main(void)
 			resource_placeholder.batterydata = battery_placeholder;
 
 			if (client_put_send(resource_placeholder, BATTERY) != 0) {
-				LOG_ERR("Failed to send PUT request, exit...\n");
-				break;
+				LOG_ERR("Failed to send PUT request...\n");
+				continue;
 			}
 
 			// Receive and parse response from the CoAP server
 			received = onem2m_receive();
 			if (received < 0) {
-				LOG_ERR("Socket error: %d, exit", errno);
-				break;
+				LOG_ERR("Socket error: %d", errno);
+				continue;
 			} if (received == 0) {
 				LOG_INF("Empty datagram");
 				continue;
@@ -316,8 +316,8 @@ int main(void)
 
 			err = onem2m_parse(received, BATTERY);
 			if (err < 0) {
-				LOG_ERR("Invalid response, exit");
-				break;
+				LOG_ERR("Invalid response");
+				continue;
 			}
 		}
 
@@ -329,15 +329,15 @@ int main(void)
 		resource_placeholder.meshdata = mesh_placeholder;
 		
 		if (client_put_send(resource_placeholder, MESH_CONNECTIVITY) != 0) {
-			LOG_ERR("Failed to send PUT request, exit...\n");
-			break;
+			LOG_ERR("Failed to send PUT request...\n");
+			continue;
 		}
 		
 		// Receive and parse response from the CoAP server
 		received = onem2m_receive();
 		if (received < 0) {
-			LOG_ERR("Socket error: %d, exit", errno);
-			break;
+			LOG_ERR("Socket error: %d", errno);
+			continue;
 		} if (received == 0) {
 			LOG_INF("Empty datagram");
 			continue;
@@ -345,22 +345,21 @@ int main(void)
 
 		err = onem2m_parse(received, MESH_CONNECTIVITY);
 		if (err < 0) {
-			LOG_ERR("Invalid response, exit");
-			break;
+			LOG_ERR("Invalid response");
+			continue;
 		}
 
 		// Get LOCKDATA from the CoAP server
 		if (client_get_send(LOCK) != 0) {
-			LOG_ERR("Failed to send GET request, exit...\n");
-			break;
+			LOG_ERR("Failed to send GET request...\n");
+			continue;
 		}
 		
 		// Receive and parse response from the CoAP server
-		
 		received = onem2m_receive();
 		if (received < 0) {
-			LOG_ERR("Socket error: %d, exit", errno);
-			break;
+			LOG_ERR("Socket error: %d", errno);
+			continue;
 		} if (received == 0) {
 			LOG_INF("Empty datagram");
 			continue;
@@ -368,8 +367,8 @@ int main(void)
 
 		err = onem2m_parse(received, LOCK);
 		if (err < 0) {
-			LOG_ERR("Invalid response, exit");
-			break;
+			LOG_ERR("Invalid response");
+			continue;
 		}
 
 		LOG_INF("Lock status: %s", lock_placeholder.lock ? "true" : "false");
@@ -381,7 +380,7 @@ int main(void)
 		err = lte_lc_func_mode_set(LTE_LC_FUNC_MODE_DEACTIVATE_LTE);
 		if (err != 0) {
 			LOG_ERR("Failed to deactivate LTE and enable GNSS functional mode");
-			break;
+			continue;
 		}
 
 		// END OF LOOP
@@ -407,9 +406,12 @@ int main(void)
 		if (sleep_duration > 0) {
 			k_sleep(K_MSEC(sleep_duration));
 		}
+
+		LOG_INF("\n\n");
 	}
 
 	onem2m_close_socket();
+	LOG_INF("Application complete");
 
 	return 0;
 }
