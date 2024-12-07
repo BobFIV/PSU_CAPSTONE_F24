@@ -192,7 +192,8 @@ int main(void)
 	bool first_fix = false;
 	
 	int iteration_count = 0;
-	uint64_t start_time, end_time, loop_duration, sleep_duration;
+	uint64_t start_time, end_time, loop_duration;
+	int sleep_duration;
 
 	// Initialization
 
@@ -419,7 +420,7 @@ int main(void)
 
 		end_time = k_uptime_get();
 		loop_duration = end_time - start_time;
-		sleep_duration = 60000 - loop_duration;
+		sleep_duration = 6000 - loop_duration;
 		LOG_INF("Loop duration: %llu ms", loop_duration);
 
 		if (sleep_duration > 0) {
