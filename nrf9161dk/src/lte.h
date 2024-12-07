@@ -1,9 +1,7 @@
 #include <stdio.h>
 #include <ncs_version.h>
-
 #include <zephyr/kernel.h>
 #include <zephyr/net/socket.h>
-
 #include <zephyr/logging/log.h>
 #include <modem/nrf_modem_lib.h>
 #include <modem/lte_lc.h>
@@ -11,8 +9,8 @@
 
 extern struct k_sem lte_connected;
 
-//LTE handler
+// Handler for LTE events
 void lte_handler(const struct lte_lc_evt *const evt);
 
-//For configuring the modem and connecting to the network
+// Initialize and configure the modem
 int modem_configure(void);

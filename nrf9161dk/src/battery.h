@@ -9,10 +9,10 @@
 #define BATTERY_MIN_VOLTAGE_MV 1218
 #define BATTERY_MEASUREMENT_OFFSET_MV -54
 
-// Initialize battery monitoring
+// Initialize the battery monitoring
 int battery_init(void);
 
-// Read voltage at the configured ADC input pin
+// Read the battery voltage from the ADC pin
 int pin_read(void);
 
 // Get the battery level as a percentage

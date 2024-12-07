@@ -8,7 +8,7 @@
 
 extern struct k_sem gnss_fix_obtained;
 
-// Print the latitude and longitude, and other data
+// Print the latitude and longitude, and other data from PVT data
 void print_fix_data(struct nrf_modem_gnss_pvt_data_frame *pvt_data);
 
 // Return the current PVT data

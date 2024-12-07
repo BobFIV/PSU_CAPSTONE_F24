@@ -11,7 +11,7 @@
 #include "lte.h"
 #include <zephyr/net/coap.h>
 
-/* oneM2M CoAP Options , here just for now */
+/* oneM2M CoAP Option codes */
 #define COAP_OPTION_ONEM2M_OT 259
 #define COAP_OPTION_ONEM2M_RTURI 263
 #define COAP_OPTION_ONEM2M_TY 267
@@ -35,13 +35,13 @@
 #define COAP_OPTION_ONEM2M_PRPI 347
 #define COAP_OPTION_ONEM2M_MSU 351
 
-/* oneM2M CoAP Content Type */
+/* oneM2M CoAP Content Types */
 #define COAP_CONTENT_FORMAT_ONEM2M_TY_AE 2
 #define COAP_CONTENT_FORMAT_ONEM2M_TY_CONTAINER 3
 #define COAP_CONTENT_FORMAT_ONEM2M_TY_CONTAINER_INSTANCE 4
 #define COAP_CONTENT_FORMAT_ONEM2M_TY_FLEXCONTAINER 28
 
-/* CoAP Content Format*/
+/* CoAP Content Formats */
 #define COAP_CONTENT_FORMAT_ONEM2M_JSON 50
 
 #define APP_COAP_VERSION 1

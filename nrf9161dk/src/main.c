@@ -28,14 +28,21 @@
 #include <zephyr/sys/time_units.h>
 #include <zephyr/drivers/gpio.h>
 
-
+/*
+testing_mode = 0: GNSS is used
+testing_mode = 1: Mock GNSS data is used
+testing_mode = 2: Mock GNSS data is used, end after one iteration
+*/
 int testing_mode = 1;
 
+// Configure GPIO pins for external LED
 #define EXTERNAL_LED_NODE DT_NODELABEL(extled1)
 static const struct gpio_dt_spec lockled = GPIO_DT_SPEC_GET(EXTERNAL_LED_NODE, gpios);
 
 int resolve_address_lock = 0;
-union resource_data data;
+
+// Define data points structures
+union resource_data resource_placeholder;
 
 struct bike bike_placeholder = {
 	.latie = 0.0,
@@ -59,20 +66,16 @@ struct lock lock_placeholder = {
 	.lock = true
 };
 
-union resource_data resource_placeholder;
-
-//Register this as the main module
+// Register this as the main module
 LOG_MODULE_REGISTER(Main_Module, LOG_LEVEL_INF);
 
-// Handle for button events
+// Handler for button events
 static void button_handler(uint32_t button_state, uint32_t has_changed)
 {
-	int err;
-	int received;
+	int err, received;
 
 	// Button 1: Get lock data
-	if (has_changed & DK_BTN1_MSK && button_state & DK_BTN1_MSK) 
-	{
+	if (has_changed & DK_BTN1_MSK && button_state & DK_BTN1_MSK) {
 		LOG_INF("Button 1 pressed\n");
 
 		err = client_get_send(LOCK);
@@ -85,19 +88,15 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 		onem2m_parse(received, LOCK);	
 
 		LOG_INF("Lock status: %s", lock_placeholder.lock ? "true" : "false");
-
 		gpio_pin_set_dt(&lockled, lock_placeholder.lock);
-
 	}
 
 	// Button 2: Send bike data
-	else if (has_changed & DK_BTN2_MSK && button_state & DK_BTN2_MSK)
-	{
+	else if (has_changed & DK_BTN2_MSK && button_state & DK_BTN2_MSK) {
 		LOG_INF("Button 2 pressed");
 
 		bike_placeholder.latie += 1.0;
 		bike_placeholder.longe += 1.0;
-
 		resource_placeholder.bikedata = bike_placeholder;
 		
 		err = client_put_send(resource_placeholder, BIKEDATA);
@@ -110,13 +109,11 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 		onem2m_parse(received, BIKEDATA);
 	}
 
-	// Button 3: Send batter data
-	else if (has_changed & DK_BTN3_MSK && button_state & DK_BTN3_MSK)
-	{
+	// Button 3: Send battery data
+	else if (has_changed & DK_BTN3_MSK && button_state & DK_BTN3_MSK) {
 		LOG_INF("Button 3 pressed");
 
 		battery_placeholder.lvl = get_battery_level();
-
 		resource_placeholder.batterydata = battery_placeholder;
 		
 		err = client_put_send(resource_placeholder, BATTERY);
@@ -130,12 +127,10 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 	}
 
 	// Button 4: Send mesh data
-	else if (has_changed & DK_BTN4_MSK && button_state & DK_BTN4_MSK)
-	{
+	else if (has_changed & DK_BTN4_MSK && button_state & DK_BTN4_MSK) {
 		LOG_INF("Button 4 pressed");
 
 		mesh_placeholder.stnr += 1;
-
 		resource_placeholder.meshdata = mesh_placeholder;
 
 		err = client_put_send(resource_placeholder, MESH_CONNECTIVITY);
@@ -149,78 +144,79 @@ static void button_handler(uint32_t button_state, uint32_t has_changed)
 	}
 }
 
+// Initialization sequence function
 static int init_all(void)
 {
+	// Initialize LED library
 	if (dk_leds_init() != 0) {
 		LOG_ERR("Failed to initialize the LED library");
 		return -1;
 	}
 
+	// Configure modem
 	if (modem_configure() != 0) {
 		LOG_ERR("Failed to configure the modem");
 		return -1;
 	}
 
+	// Initialize button library
 	if (dk_buttons_init(button_handler) != 0) {
 		LOG_ERR("Failed to initialize the buttons library");
 		return -1;
 	}
 
+	// Initialize I2C temperature sensor
 	if (i2c_init_temp_probe() != 0) {
 		return -1;
 	}
 
+	// Initialize ADC battery monitoring
 	if (battery_init() != 0) {
 		return -1;
 	}
 
-	if (testing_mode == 0){
+	// Initialize GNSS if testing_mode is 0
+	if (testing_mode == 0) {
 		if (gnss_init() != 0) {
 			return -1;
 		}
 	}
+	
+	// Initialize GPIO for external LED
+	gpio_pin_configure_dt(&lockled, GPIO_OUTPUT_ACTIVE);
+	gpio_pin_set_dt(&lockled, lock_placeholder.lock);
 
 	return 0;
 }
 
 int main(void)
 {
-	int err;
-	int received;
-	
-	struct nrf_modem_gnss_pvt_data_frame gnss_data;
-	bool first_fix = false;
-	
-	int iteration_count = 0;
+	int err, received;
+
 	uint64_t start_time, end_time, loop_duration;
 	int sleep_duration;
+	int iteration_count = 0;
+
+	struct nrf_modem_gnss_pvt_data_frame gnss_data;
+	bool first_fix = false;
 
 	// Initialization
-
 	if (init_all() != 0) {
 		LOG_ERR("Failed to initialize the application");
 		return 0;
 	}
 
-	gpio_pin_configure_dt(&lockled, GPIO_OUTPUT_ACTIVE);
-	gpio_pin_set_dt(&lockled, lock_placeholder.lock);
-
-	k_sleep(K_SECONDS(3));
-
 	// Main loop
-
 	while (1) {
 		start_time = k_uptime_get();
 
 		// Acquire data from GNSS receiver and sensors
-
 		int lvl_temp = get_battery_level();
-
 		bike_placeholder.tempe = i2c_get_temp();
 		
-		if (testing_mode == 0){
-			// Wait for GNSS fix
-			k_sem_take(&gnss_fix_obtained, K_FOREVER);
+		// A. If GNSS is available, use GNSS data
+		if (testing_mode == 0) {
+			k_sem_take(&gnss_fix_obtained, K_SECONDS(180)); // Await GNSS fix
 			
 			// Acquire data from GNSS receiver and sensors
 			gnss_data = get_current_pvt();
@@ -228,10 +224,11 @@ int main(void)
 				bike_placeholder.latie = gnss_data.latitude;
 				bike_placeholder.longe = gnss_data.longitude;
 				bike_placeholder.speed = gnss_data.speed;
-
 				first_fix = true;
 			}
 		}
+		
+		// B. If GNSS is not available, use mock data
 		else if (testing_mode >= 1) {
 			bike_placeholder.latie = (40.791515) + ((sys_rand16_get() % 2 == 0 ? 1 : -1) * (sys_rand16_get() % 20 * 0.00001));
 			bike_placeholder.longe = (-77.870764) + ((sys_rand16_get() % 2 == 0 ? 1 : -1) * (sys_rand16_get() % 20 * 0.00001));
@@ -239,12 +236,10 @@ int main(void)
 			if (bike_placeholder.speed < 0) {
 				bike_placeholder.speed = 0;
 			}
-
 			first_fix = true;
 		}
 
 		// Activate LTE
-
 		if (lte_lc_func_mode_set(LTE_LC_FUNC_MODE_NORMAL) != 0) {
 			LOG_ERR("Failed to activate LTE");
 			return 0;
@@ -259,8 +254,7 @@ int main(void)
 		}
 
 		// Connect to the CoAP server
-
-		if (resolve_address_lock == 0){
+		if (resolve_address_lock == 0) {
 			LOG_INF("Resolving the server address\r");
 			if (server_resolve() != 0) {
 				LOG_ERR("Failed to resolve server name\n");
@@ -275,18 +269,15 @@ int main(void)
 		}
 
 		// Put BIKEDATA to the CoAP server
-
 		resource_placeholder.bikedata = bike_placeholder;
 
-		if (first_fix) 
-		{
+		if (first_fix) {
 			if (client_put_send(resource_placeholder, BIKEDATA) != 0) {
 				LOG_ERR("Failed to send PUT request, exit...\n");
 				break;
 			}
 			
 			// Receive and parse response from the CoAP server
-
 			received = onem2m_receive();
 			if (received < 0) {
 				LOG_ERR("Socket error: %d, exit", errno);
@@ -304,9 +295,7 @@ int main(void)
 		}
 
 		// Put BATTERYDATA to the CoAP server, if the battery level has changed
-		
-		if (lvl_temp != battery_placeholder.lvl)
-		{
+		if (lvl_temp != battery_placeholder.lvl) {
 			battery_placeholder.lvl = lvl_temp;
 			resource_placeholder.batterydata = battery_placeholder;
 
@@ -316,7 +305,6 @@ int main(void)
 			}
 
 			// Receive and parse response from the CoAP server
-
 			received = onem2m_receive();
 			if (received < 0) {
 				LOG_ERR("Socket error: %d, exit", errno);
@@ -334,20 +322,18 @@ int main(void)
 		}
 
 		// Put MESHDATA to the CoAP server
-
 		if (testing_mode >= 1) {
 			mesh_placeholder.stnr += 1;
 		}
 
 		resource_placeholder.meshdata = mesh_placeholder;
-
+		
 		if (client_put_send(resource_placeholder, MESH_CONNECTIVITY) != 0) {
 			LOG_ERR("Failed to send PUT request, exit...\n");
 			break;
 		}
 		
 		// Receive and parse response from the CoAP server
-
 		received = onem2m_receive();
 		if (received < 0) {
 			LOG_ERR("Socket error: %d, exit", errno);
@@ -364,7 +350,6 @@ int main(void)
 		}
 
 		// Get LOCKDATA from the CoAP server
-		
 		if (client_get_send(LOCK) != 0) {
 			LOG_ERR("Failed to send GET request, exit...\n");
 			break;
@@ -388,36 +373,32 @@ int main(void)
 		}
 
 		LOG_INF("Lock status: %s", lock_placeholder.lock ? "true" : "false");
-
 		gpio_pin_set_dt(&lockled, lock_placeholder.lock);
 
 		// Disconnect from the CoAP server, deactivate LTE
-
 		onem2m_close_socket();
 
 		err = lte_lc_func_mode_set(LTE_LC_FUNC_MODE_DEACTIVATE_LTE);
-		if (err != 0){
-			LOG_ERR("Failed to decativate LTE and enable GNSS functional mode");
+		if (err != 0) {
+			LOG_ERR("Failed to deactivate LTE and enable GNSS functional mode");
 			break;
 		}
 
 		// END OF LOOP
-
-		if (testing_mode >= 2) {
+		if (testing_mode >= 2) {  // If in testing mode >= 2, break after one iteration
 			break;
 		}
 		
-		LOG_INF("Iteration %d complete\n\n", iteration_count+1);
+		LOG_INF("Iteration %d complete", iteration_count + 1);
 		iteration_count++;
 
-		if (iteration_count % 30 == 0) {
+		if (iteration_count % 30 == 0) {  // Restart modem every 30 iterations, bypass hourly LTE modem activation limit set by RPM
 			LOG_INF("Modem restarting\n");
 			nrf_modem_lib_shutdown();
 			nrf_modem_lib_init();
 		}
 		
 		// SLEEP
-
 		end_time = k_uptime_get();
 		loop_duration = end_time - start_time;
 		sleep_duration = 6000 - loop_duration;
