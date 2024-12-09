@@ -13,7 +13,7 @@ This repository contains the firmware source code for an advanced bike-sharing I
 
 ## Overview
 
-This repository contains the source code for an IoT application running on a Nordic Semiconductor nRF9160 DK. The application integrates various technologies such as LTE, GNSS, DECT-NR, I2C, and CoAP to monitor and transmit data related to bike status, battery levels, and mesh connectivity. It uses Zephyr RTOS and Nordic SDK for real-time operations and device management. The application handles button events, controls LEDs, and communicates with a remote server using the oneM2M protocol over CoAP.
+This repository contains the source code for an IoT application running on a Nordic Semiconductor nRF9160 DK. The application integrates various technologies such as DECT-NR, LTE, GNSS, I2C, and CoAP to monitor and transmit data related to bike status, battery levels, and mesh connectivity. It uses Zephyr RTOS and Nordic SDK for real-time operations and device management. The application handles button events, controls LEDs, and communicates with a remote server using the oneM2M protocol over CoAP.
 
 ## Features
 
@@ -45,26 +45,26 @@ Source code is split into separate modular files based on the system(s) it inter
 There are 2 root directories containing the separate firmware used by each device in each device pair. One nRF9161-DK board utilizes **LTE** to connect with the cellular network, the other utilizes **DECT-NR** to connect with other devices.
 
 ```
-nrf9161dk/               # LTE enabled device firmware
+nrf9161dk/              # LTE enabled device firmware
 │
-├── boards/              # Board specific device tree overlays
+├── boards/             # Board specific device tree overlays
 │   └── nrf9161dk_nrf9161_ns.overlay
 │
 ├── src/
-│   ├── battery.c/       # Battery level reporting using ADC
-│   ├── battery.h/       # Battery measurement parameters
-│   ├── coap_onem2m.c/   # oneM2M based CoAP communication
-│   ├── coap_onem2m.h/
-│   ├── gnss.c/          # GNSS initialization and event handling
-│   ├── gnss.h/
-│   ├── i2c.h/           # Sensor reading over I2C
-│   ├── i2c.h/
-│   ├── lte.h/           # LTE modem configuration and event handling
-│   ├── lte.h/
-│   ├── uart.h/          # Intra-device communication over UART
-│   ├── uart.h/
-│   ├── main.c/          # Main application logic and event handling
-│   └── main.h/
+│   ├── battery.c       # Battery level reporting using ADC
+│   ├── battery.h       # Battery measurement parameters
+│   ├── coap_onem2m.c   # oneM2M based CoAP communication
+│   ├── coap_onem2m.h
+│   ├── gnss.c          # GNSS initialization and event handling
+│   ├── gnss.h
+│   ├── i2c.h           # Sensor reading over I2C
+│   ├── i2c.h
+│   ├── lte.h           # LTE modem configuration and event handling
+│   ├── lte.h
+│   ├── uart.h          # Intra-device communication over UART
+│   ├── uart.h
+│   ├── main.c          # Main application logic and event handling
+│   └── main.h
 │
 ├── CMakeLists.txt
 ├── Kconfig
@@ -72,22 +72,22 @@ nrf9161dk/               # LTE enabled device firmware
 ├── sample.yaml
 └── README.md
 
-nrf9161dk-dectnr/        # DECT-NR enabled device firmware
+nrf9161dk-dectnr/       # DECT-NR enabled device firmware
 │
 ├── boards/
 │   └── nrf9161dk_nrf9161_ns.overlay
 │
 ├── src/
-│   ├── dect-nr.c/
-│   ├── dect-nr.h/
-│   ├── mesh-root.c/
-│   ├── mesh-root.h/
-│   ├── mesh.c/
-│   ├── mesh.h/
-│   ├── uart.c/
-│   ├── uart.h/
-│   ├── main.c/
-│   └── main.h/
+│   ├── dect-nr.c
+│   ├── dect-nr.h
+│   ├── mesh-root.c
+│   ├── mesh-root.h
+│   ├── mesh.c
+│   ├── mesh.h
+│   ├── uart.c
+│   ├── uart.h
+│   ├── main.c
+│   └── main.h
 │
 ├── CMakeLists.txt
 ├── Kconfig
