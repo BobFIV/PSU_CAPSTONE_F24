@@ -1,0 +1,36 @@
+/ {
+	zephyr,user {
+		io-channels = <&adc 0>;
+	};
+
+	leds {
+		extled1: ext-led-1 {
+			gpios = <&gpio0 2 0>;
+			label = "External LED 1";
+		};
+	};
+};
+
+&adc {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	channel@0 {
+		reg = <0>;
+		zephyr,gain = "ADC_GAIN_1_3";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 40)>;
+		zephyr,input-positive = <NRF_SAADC_AIN4>; /* P0.17 for nRF916x*/
+		zephyr,input-negative = <NRF_SAADC_AIN3>; /* P0.16 for nRF916x*/
+		zephyr,resolution = <12>;
+		zephyr,oversampling = <8>;
+	};
+};
+
+&i2c2 {  
+    mysensor: mysensor@38{
+        compatible = "i2c-device";
+        status = "okay";
+        reg = < 0x38 >;
+    };
+};
